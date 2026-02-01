@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stellar Web</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #0a0a0f;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .settings-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 15, 25, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            width: 280px;
+            color: #fff;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .settings-panel h2 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            letter-spacing: 0.5px;
+        }
+
+        .setting {
+            margin-bottom: 18px;
+        }
+
+        .setting label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 8px;
+        }
+
+        .setting label span {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+        }
+
+        .setting input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            appearance: none;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .setting input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.15s ease;
+        }
+
+        .setting input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        .setting input[type="color"] {
+            width: 100%;
+            height: 36px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        .setting input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        .setting input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 4px;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(15, 15, 25, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-panel.hidden {
+            display: none;
+        }
+
+        .settings-panel.hidden + .toggle-btn {
+            display: flex;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 5px;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+
+    <div class="settings-panel" id="settingsPanel">
+        <button class="close-btn" id="closeBtn">&times;</button>
+        <h2>Settings</h2>
+
+        <div class="setting">
+            <label>Particles <span id="particleCountValue">150</span></label>
+            <input type="range" id="particleCount" min="20" max="400" value="150">
+        </div>
+
+        <div class="setting">
+            <label>Particle Size <span id="particleSizeValue">2</span></label>
+            <input type="range" id="particleSize" min="1" max="8" value="2" step="0.5">
+        </div>
+
+        <div class="setting">
+            <label>Speed <span id="speedValue">1</span></label>
+            <input type="range" id="speed" min="0.1" max="3" value="1" step="0.1">
+        </div>
+
+        <div class="setting">
+            <label>Connection Distance <span id="connectionDistValue">120</span></label>
+            <input type="range" id="connectionDist" min="50" max="250" value="120">
+        </div>
+
+        <div class="setting">
+            <label>Color</label>
+            <input type="color" id="particleColor" value="#6366f1">
+        </div>
+    </div>
+
+    <button class="toggle-btn" id="toggleBtn">&#9881;</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        let particles = [];
+
+        // Settings
+        let settings = {
+            particleCount: 150,
+            particleSize: 2,
+            speed: 1,
+            connectionDist: 120,
+            color: '#6366f1'
+        };
+
+        // Resize canvas
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+
+        // Particle class
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+
+            reset() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                const angle = Math.random() * Math.PI * 2;
+                const baseSpeed = 0.5 + Math.random() * 0.5;
+                this.vx = Math.cos(angle) * baseSpeed;
+                this.vy = Math.sin(angle) * baseSpeed;
+            }
+
+            update() {
+                this.x += this.vx * settings.speed;
+                this.y += this.vy * settings.speed;
+
+                // Bounce off edges
+                if (this.x < 0 || this.x > width) {
+                    this.vx *= -1;
+                    this.x = Math.max(0, Math.min(width, this.x));
+                }
+                if (this.y < 0 || this.y > height) {
+                    this.vy *= -1;
+                    this.y = Math.max(0, Math.min(height, this.y));
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, settings.particleSize, 0, Math.PI * 2);
+                ctx.fillStyle = settings.color;
+                ctx.fill();
+            }
+        }
+
+        // Initialize particles
+        function initParticles() {
+            particles = [];
+            for (let i = 0; i < settings.particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        // Update particle count
+        function updateParticleCount() {
+            const diff = settings.particleCount - particles.length;
+            if (diff > 0) {
+                for (let i = 0; i < diff; i++) {
+                    particles.push(new Particle());
+                }
+            } else if (diff < 0) {
+                particles.splice(0, Math.abs(diff));
+            }
+        }
+
+        // Draw connections
+        function drawConnections() {
+            const maxDist = settings.connectionDist;
+            const maxDistSq = maxDist * maxDist;
+
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distSq = dx * dx + dy * dy;
+
+                    if (distSq < maxDistSq) {
+                        const dist = Math.sqrt(distSq);
+                        const opacity = 1 - (dist / maxDist);
+
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.strokeStyle = settings.color + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        // Animation loop
+        function animate() {
+            ctx.fillStyle = 'rgba(10, 10, 15, 0.2)';
+            ctx.fillRect(0, 0, width, height);
+
+            drawConnections();
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // Settings controls
+        const controls = {
+            particleCount: document.getElementById('particleCount'),
+            particleSize: document.getElementById('particleSize'),
+            speed: document.getElementById('speed'),
+            connectionDist: document.getElementById('connectionDist'),
+            particleColor: document.getElementById('particleColor')
+        };
+
+        const values = {
+            particleCount: document.getElementById('particleCountValue'),
+            particleSize: document.getElementById('particleSizeValue'),
+            speed: document.getElementById('speedValue'),
+            connectionDist: document.getElementById('connectionDistValue')
+        };
+
+        controls.particleCount.addEventListener('input', (e) => {
+            settings.particleCount = parseInt(e.target.value);
+            values.particleCount.textContent = e.target.value;
+            updateParticleCount();
+        });
+
+        controls.particleSize.addEventListener('input', (e) => {
+            settings.particleSize = parseFloat(e.target.value);
+            values.particleSize.textContent = e.target.value;
+        });
+
+        controls.speed.addEventListener('input', (e) => {
+            settings.speed = parseFloat(e.target.value);
+            values.speed.textContent = e.target.value;
+        });
+
+        controls.connectionDist.addEventListener('input', (e) => {
+            settings.connectionDist = parseInt(e.target.value);
+            values.connectionDist.textContent = e.target.value;
+        });
+
+        controls.particleColor.addEventListener('input', (e) => {
+            settings.color = e.target.value;
+        });
+
+        // Panel toggle
+        const settingsPanel = document.getElementById('settingsPanel');
+        const closeBtn = document.getElementById('closeBtn');
+        const toggleBtn = document.getElementById('toggleBtn');
+
+        closeBtn.addEventListener('click', () => {
+            settingsPanel.classList.add('hidden');
+        });
+
+        toggleBtn.addEventListener('click', () => {
+            settingsPanel.classList.remove('hidden');
+        });
+
+        // Initialize
+        window.addEventListener('resize', resize);
+        resize();
+        initParticles();
+        animate();
+    </script>
+</body>
+</html>
