@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boids Flocking Simulation — Craig Reynolds 1987</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0e17;--panel:#111827;--card:#1f2937;--border:#374151;
+    --text:#e5e7eb;--muted:#9ca3af;--accent:#60a5fa;--accent2:#a78bfa;
+    --green:#34d399;--red:#f87171;--orange:#fbbf24;
+  }
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg);color:var(--text);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    overflow-x:hidden;
+  }
+  h1{
+    text-align:center;padding:20px 0 6px;font-size:1.6rem;font-weight:700;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;letter-spacing:.5px;
+  }
+  .subtitle{text-align:center;color:var(--muted);font-size:.82rem;margin-bottom:14px}
+  .app{
+    display:flex;flex-wrap:wrap;gap:16px;padding:0 16px 24px;
+    max-width:1320px;width:100%;justify-content:center;
+  }
+  .canvas-wrap{
+    position:relative;border-radius:12px;overflow:hidden;
+    border:1px solid var(--border);flex-shrink:0;
+    box-shadow:0 0 40px rgba(96,165,250,.08);
+  }
+  canvas{display:block;background:#070b14}
+  .controls{
+    display:flex;flex-direction:column;gap:12px;
+    min-width:280px;max-width:340px;flex:1;
+  }
+  .card{
+    background:var(--card);border:1px solid var(--border);
+    border-radius:10px;padding:14px 16px;
+  }
+  .card-title{
+    font-size:.78rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:1px;color:var(--accent);margin-bottom:10px;
+  }
+  /* Sliders */
+  .slider-group{margin-bottom:10px}
+  .slider-group:last-child{margin-bottom:0}
+  .slider-label{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:.82rem;margin-bottom:4px;
+  }
+  .slider-label span:first-child{color:var(--text)}
+  .slider-val{
+    font-weight:600;color:var(--accent);
+    background:rgba(96,165,250,.12);padding:1px 7px;border-radius:4px;
+    font-size:.78rem;min-width:32px;text-align:center;
+  }
+  input[type=range]{
+    -webkit-appearance:none;width:100%;height:6px;
+    border-radius:3px;background:#374151;outline:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:var(--accent);cursor:pointer;
+    box-shadow:0 0 6px rgba(96,165,250,.5);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:16px;height:16px;border-radius:50%;border:none;
+    background:var(--accent);cursor:pointer;
+  }
+  /* Buttons */
+  .btn-row{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{
+    flex:1;min-width:80px;padding:8px 10px;border:1px solid var(--border);
+    border-radius:8px;background:var(--card);color:var(--text);
+    font-size:.78rem;font-weight:500;cursor:pointer;
+    transition:all .2s;text-align:center;
+  }
+  .btn:hover{background:var(--border);border-color:var(--accent);transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+  .btn.preset{border-color:var(--accent2)}
+  .btn.preset:hover{background:rgba(167,139,250,.2);border-color:var(--accent2)}
+  .btn.green{border-color:var(--green)}
+  .btn.green:hover{background:rgba(52,211,153,.15)}
+  .btn.green.active{background:var(--green);color:#000;border-color:var(--green)}
+  .btn.red{border-color:var(--red)}
+  .btn.red:hover{background:rgba(248,113,113,.15)}
+  /* Metrics */
+  .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .metric{
+    background:rgba(96,165,250,.06);border:1px solid rgba(96,165,250,.12);
+    border-radius:8px;padding:8px 10px;text-align:center;
+  }
+  .metric-val{font-size:1.1rem;font-weight:700;color:var(--accent)}
+  .metric-lbl{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+  /* Boundary toggle */
+  .boundary-toggle{display:flex;gap:0;border-radius:8px;overflow:hidden;border:1px solid var(--border)}
+  .boundary-toggle .btn{border:none;border-radius:0;flex:1}
+  .tri-toggle{display:flex}
+  /* Tooltip */
+  [data-tip]{position:relative}
+  [data-tip]::after{
+    content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 8px);
+    transform:translateX(-50%);background:#1e293b;color:var(--text);
+    font-size:.72rem;padding:6px 10px;border-radius:6px;white-space:nowrap;
+    pointer-events:none;opacity:0;transition:opacity .2s;z-index:10;
+    border:1px solid var(--border);max-width:260px;white-space:normal;
+    text-align:center;line-height:1.3;
+  }
+  [data-tip]:hover::after{opacity:1}
+  @media(max-width:900px){
+    .app{flex-direction:column;align-items:center}
+    .controls{max-width:100%;min-width:0;width:100%}
+  }
+</style>
+</head>
+<body>
+
+<h1>Boids Flocking Simulation</h1>
+<p class="subtitle">Craig Reynolds' 1987 emergent flocking behavior — separation, alignment, cohesion</p>
+
+<div class="app">
+  <!-- Canvas -->
+  <div class="canvas-wrap">
+    <canvas id="canvas" width="820" height="620"></canvas>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+
+    <!-- Parameters -->
+    <div class="card">
+      <div class="card-title">Parameters</div>
+
+      <div class="slider-group" data-tip="Number of boids in the simulation — more boids means more complex flocking">
+        <div class="slider-label"><span>Boid Count</span><span class="slider-val" id="cntVal">100</span></div>
+        <input type="range" id="boidcount" min="20" max="1000" step="10" value="100">
+      </div>
+      <div class="slider-group" data-tip="How strongly boids steer away from nearby neighbors to avoid crowding">
+        <div class="slider-label"><span>Separation</span><span class="slider-val" id="sepVal">1.5</span></div>
+        <input type="range" id="separation" min="0" max="3" step="0.1" value="1.5">
+      </div>
+      <div class="slider-group" data-tip="How strongly boids steer to match the average heading of their neighbors">
+        <div class="slider-label"><span>Alignment</span><span class="slider-val" id="aliVal">1.0</span></div>
+        <input type="range" id="alignment" min="0" max="3" step="0.1" value="1.0">
+      </div>
+      <div class="slider-group" data-tip="How strongly boids steer toward the average position of their neighbors">
+        <div class="slider-label"><span>Cohesion</span><span class="slider-val" id="cohVal">1.0</span></div>
+        <input type="range" id="cohesion" min="0" max="3" step="0.1" value="1.0">
+      </div>
+      <div class="slider-group" data-tip="How far each boid can see — only neighbors within this radius are considered">
+        <div class="slider-label"><span>Neighbor Radius</span><span class="slider-val" id="radVal">50</span></div>
+        <input type="range" id="radius" min="20" max="150" step="1" value="50">
+      </div>
+      <div class="slider-group" data-tip="The maximum speed any boid can travel — higher values make them faster and more erratic">
+        <div class="slider-label"><span>Max Speed</span><span class="slider-val" id="spdVal">4</span></div>
+        <input type="range" id="maxspeed" min="1" max="8" step="0.5" value="4">
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="card">
+      <div class="card-title">Behavior Presets</div>
+      <div class="btn-row">
+        <button class="btn preset" id="preSchool" data-tip="Synchronized swimming: high alignment, medium cohesion, low separation">Schooling</button>
+        <button class="btn preset" id="preChaos" data-tip="Erratic swarming: low alignment and cohesion, high speed, small vision">Chaotic Swarm</button>
+        <button class="btn preset" id="preCluster" data-tip="Dense flock: high cohesion pulls boids together into a tight ball">Tight Cluster</button>
+      </div>
+    </div>
+
+    <!-- Boundary -->
+    <div class="card">
+      <div class="card-title">Boundary Mode</div>
+      <div class="boundary-toggle">
+        <button class="btn active" id="btnWrap" data-tip="Boids exiting one edge reappear on the opposite side">Wrap</button>
+        <button class="btn" id="btnBounce" data-tip="Boids bounce off the edges of the canvas">Bounce</button>
+      </div>
+    </div>
+
+    <!-- Teams -->
+    <div class="card">
+      <div class="card-title">Team Flocking</div>
+      <div class="boundary-toggle">
+        <button class="btn active" id="btnTeamOff" data-tip="All boids flock together as one group">Off</button>
+        <button class="btn" id="btnTeamOn" data-tip="Boids split into two colored teams — each team only flocks with its own kind">Two Teams</button>
+      </div>
+    </div>
+
+    <!-- Mouse -->
+    <div class="card">
+      <div class="card-title">Mouse Interaction</div>
+      <div class="boundary-toggle tri-toggle">
+        <button class="btn active" id="btnMouseIgnore" data-tip="Boids ignore the mouse cursor entirely">Ignore</button>
+        <button class="btn" id="btnMouseRepel" data-tip="Boids flee away from the mouse cursor">Repel</button>
+        <button class="btn" id="btnMouseAttract" data-tip="Boids are drawn toward the mouse cursor">Attract</button>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-title">Controls</div>
+      <div class="btn-row">
+        <button class="btn green" id="btnPause" data-tip="Pause or resume the simulation">Pause</button>
+        <button class="btn red" id="btnReset" data-tip="Reinitialize all boids to random positions and velocities">Reset</button>
+      </div>
+    </div>
+
+    <!-- Instrumentation -->
+    <div class="card">
+      <div class="card-title">Instrumentation</div>
+      <div class="metrics">
+        <div class="metric"><div class="metric-val" id="mFPS">0</div><div class="metric-lbl">FPS</div></div>
+        <div class="metric"><div class="metric-val" id="mCount">100</div><div class="metric-lbl">Boid Count</div></div>
+        <div class="metric"><div class="metric-val" id="mSpeed">0</div><div class="metric-lbl">Avg Speed</div></div>
+        <div class="metric"><div class="metric-val" id="mNeighbors">0</div><div class="metric-lbl">Avg Neighbors</div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ——— Config ———
+const MAX_FORCE = 0.15;
+const MOUSE_RADIUS = 180;
+const MOUSE_FORCE = 0.7;
+const GRID_CELL = 60;
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+// ——— State ———
+let paused = false;
+let boundaryMode = 'wrap';
+let teamMode = false;
+let mouseMode = 'ignore'; // 'ignore' | 'repel' | 'attract'
+let mouseX = -9999, mouseY = -9999;
+let mouseOnCanvas = false;
+let boids = [];
+
+// ——— Mouse tracking ———
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  mouseX = (e.clientX - rect.left) * (W / rect.width);
+  mouseY = (e.clientY - rect.top) * (H / rect.height);
+  mouseOnCanvas = true;
+});
+canvas.addEventListener('mouseleave', () => { mouseOnCanvas = false; });
+
+// ——— Parameters (live-read from sliders) ———
+const sliders = {
+  boidcount:  document.getElementById('boidcount'),
+  separation: document.getElementById('separation'),
+  alignment:  document.getElementById('alignment'),
+  cohesion:   document.getElementById('cohesion'),
+  radius:     document.getElementById('radius'),
+  maxspeed:   document.getElementById('maxspeed'),
+};
+const valDisplays = {
+  boidcount:  document.getElementById('cntVal'),
+  separation: document.getElementById('sepVal'),
+  alignment:  document.getElementById('aliVal'),
+  cohesion:   document.getElementById('cohVal'),
+  radius:     document.getElementById('radVal'),
+  maxspeed:   document.getElementById('spdVal'),
+};
+
+function param(name) { return parseFloat(sliders[name].value); }
+
+// Update displayed values
+Object.keys(sliders).forEach(k => {
+  sliders[k].addEventListener('input', () => {
+    const intKeys = ['radius', 'boidcount'];
+    valDisplays[k].textContent = intKeys.includes(k)
+      ? Math.round(parseFloat(sliders[k].value))
+      : parseFloat(sliders[k].value).toFixed(1);
+  });
+});
+
+// Live boid count adjustment
+sliders.boidcount.addEventListener('input', () => {
+  const target = Math.round(param('boidcount'));
+  while (boids.length < target) boids.push(new Boid(boids.length));
+  while (boids.length > target) boids.pop();
+});
+
+// ——— Boid Class ———
+class Boid {
+  constructor(index) {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1 + Math.random() * 2;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    // Team assignment: 0 or 1
+    this.team = (index != null) ? index % 2 : Math.round(Math.random());
+    this.neighborCount = 0;
+  }
+
+  get hue() {
+    if (!teamMode) return 210 + this.team * 5; // uniform blue-ish
+    return this.team === 0 ? 200 : 340; // blue vs pink/magenta
+  }
+}
+
+// ——— Spatial Hash Grid ———
+class SpatialGrid {
+  constructor(cellSize, w, h) {
+    this.cellSize = cellSize;
+    this.cols = Math.ceil(w / cellSize);
+    this.rows = Math.ceil(h / cellSize);
+    this.cells = new Array(this.cols * this.rows);
+  }
+
+  clear() {
+    for (let i = 0; i < this.cells.length; i++) this.cells[i] = null;
+  }
+
+  _key(cx, cy) {
+    cx = ((cx % this.cols) + this.cols) % this.cols;
+    cy = ((cy % this.rows) + this.rows) % this.rows;
+    return cy * this.cols + cx;
+  }
+
+  insert(boid) {
+    const cx = Math.floor(boid.x / this.cellSize);
+    const cy = Math.floor(boid.y / this.cellSize);
+    const key = this._key(cx, cy);
+    boid._next = this.cells[key];
+    this.cells[key] = boid;
+  }
+
+  query(boid, radius, filterTeam) {
+    const result = [];
+    const r2 = radius * radius;
+    const cx = Math.floor(boid.x / this.cellSize);
+    const cy = Math.floor(boid.y / this.cellSize);
+    const span = Math.ceil(radius / this.cellSize);
+
+    for (let dx = -span; dx <= span; dx++) {
+      for (let dy = -span; dy <= span; dy++) {
+        const key = this._key(cx + dx, cy + dy);
+        let other = this.cells[key];
+        while (other) {
+          if (other !== boid && (!filterTeam || other.team === boid.team)) {
+            let ox = other.x - boid.x;
+            let oy = other.y - boid.y;
+            if (boundaryMode === 'wrap') {
+              if (ox > W / 2) ox -= W; else if (ox < -W / 2) ox += W;
+              if (oy > H / 2) oy -= H; else if (oy < -H / 2) oy += H;
+            }
+            const d2 = ox * ox + oy * oy;
+            if (d2 < r2 && d2 > 0) {
+              result.push({ boid: other, dx: ox, dy: oy, dist: Math.sqrt(d2) });
+            }
+          }
+          other = other._next;
+        }
+      }
+    }
+    return result;
+  }
+}
+
+const grid = new SpatialGrid(GRID_CELL, W, H);
+
+// ——— Initialize ———
+function initBoids() {
+  const count = Math.round(param('boidcount'));
+  boids = [];
+  for (let i = 0; i < count; i++) boids.push(new Boid(i));
+}
+initBoids();
+
+// ——— Simulation Step ———
+function update() {
+  const sepW = param('separation');
+  const aliW = param('alignment');
+  const cohW = param('cohesion');
+  const radius = param('radius');
+  const maxSpeed = param('maxspeed');
+
+  // Build spatial grid
+  grid.clear();
+  for (const b of boids) grid.insert(b);
+
+  // Accumulate forces
+  for (const b of boids) {
+    const neighbors = grid.query(b, radius, teamMode);
+    b.neighborCount = neighbors.length;
+
+    let sepX = 0, sepY = 0;
+    let aliX = 0, aliY = 0;
+    let cohX = 0, cohY = 0;
+
+    if (neighbors.length > 0) {
+      for (const n of neighbors) {
+        const invD = 1 / n.dist;
+        sepX -= n.dx * invD;
+        sepY -= n.dy * invD;
+        aliX += n.boid.vx;
+        aliY += n.boid.vy;
+        cohX += n.dx;
+        cohY += n.dy;
+      }
+
+      const count = neighbors.length;
+
+      const sepMag = Math.sqrt(sepX * sepX + sepY * sepY) || 1;
+      sepX = (sepX / sepMag) * maxSpeed - b.vx;
+      sepY = (sepY / sepMag) * maxSpeed - b.vy;
+      limitVec(sepX, sepY, MAX_FORCE, (x, y) => { sepX = x; sepY = y; });
+
+      aliX /= count; aliY /= count;
+      const aliMag = Math.sqrt(aliX * aliX + aliY * aliY) || 1;
+      aliX = (aliX / aliMag) * maxSpeed - b.vx;
+      aliY = (aliY / aliMag) * maxSpeed - b.vy;
+      limitVec(aliX, aliY, MAX_FORCE, (x, y) => { aliX = x; aliY = y; });
+
+      cohX /= count; cohY /= count;
+      const cohMag = Math.sqrt(cohX * cohX + cohY * cohY) || 1;
+      cohX = (cohX / cohMag) * maxSpeed - b.vx;
+      cohY = (cohY / cohMag) * maxSpeed - b.vy;
+      limitVec(cohX, cohY, MAX_FORCE, (x, y) => { cohX = x; cohY = y; });
+    }
+
+    // Apply weighted forces
+    b.vx += sepX * sepW + aliX * aliW + cohX * cohW;
+    b.vy += sepY * sepW + aliY * aliW + cohY * cohW;
+
+    // Mouse interaction
+    if (mouseMode !== 'ignore' && mouseOnCanvas) {
+      let mx = mouseX - b.x;
+      let my = mouseY - b.y;
+      if (boundaryMode === 'wrap') {
+        if (mx > W / 2) mx -= W; else if (mx < -W / 2) mx += W;
+        if (my > H / 2) my -= H; else if (my < -H / 2) my += H;
+      }
+      const md = Math.sqrt(mx * mx + my * my);
+      if (md < MOUSE_RADIUS && md > 1) {
+        const strength = MOUSE_FORCE * (1 - md / MOUSE_RADIUS);
+        if (mouseMode === 'attract') {
+          b.vx += (mx / md) * strength;
+          b.vy += (my / md) * strength;
+        } else {
+          b.vx -= (mx / md) * strength;
+          b.vy -= (my / md) * strength;
+        }
+      }
+    }
+
+    // Clamp speed
+    const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+    if (speed > maxSpeed) {
+      b.vx = (b.vx / speed) * maxSpeed;
+      b.vy = (b.vy / speed) * maxSpeed;
+    }
+
+    // Move
+    b.x += b.vx;
+    b.y += b.vy;
+
+    // Boundaries
+    if (boundaryMode === 'wrap') {
+      if (b.x < 0) b.x += W; else if (b.x >= W) b.x -= W;
+      if (b.y < 0) b.y += H; else if (b.y >= H) b.y -= H;
+    } else {
+      const margin = 6;
+      if (b.x < margin) { b.x = margin; b.vx = Math.abs(b.vx); }
+      else if (b.x > W - margin) { b.x = W - margin; b.vx = -Math.abs(b.vx); }
+      if (b.y < margin) { b.y = margin; b.vy = Math.abs(b.vy); }
+      else if (b.y > H - margin) { b.y = H - margin; b.vy = -Math.abs(b.vy); }
+    }
+  }
+}
+
+function limitVec(x, y, max, cb) {
+  const m = Math.sqrt(x * x + y * y);
+  if (m > max) cb(x / m * max, y / m * max);
+  else cb(x, y);
+}
+
+// ——— Rendering ———
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Subtle grid dots
+  ctx.fillStyle = 'rgba(96,165,250,0.04)';
+  for (let x = 0; x < W; x += 40) {
+    for (let y = 0; y < H; y += 40) {
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+  // Mouse influence radius indicator
+  if (mouseMode !== 'ignore' && mouseOnCanvas) {
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, MOUSE_RADIUS, 0, Math.PI * 2);
+    ctx.strokeStyle = mouseMode === 'attract'
+      ? 'rgba(52,211,153,0.25)' : 'rgba(248,113,113,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Disable glow when many boids for performance
+  const useGlow = boids.length <= 300;
+
+  for (const b of boids) {
+    const angle = Math.atan2(b.vy, b.vx);
+    const size = 7;
+    const hue = b.hue;
+
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(angle);
+
+    if (useGlow) {
+      ctx.shadowColor = `hsla(${hue}, 80%, 65%, 0.6)`;
+      ctx.shadowBlur = 8;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(size, 0);
+    ctx.lineTo(-size * 0.6, size * 0.45);
+    ctx.lineTo(-size * 0.6, -size * 0.45);
+    ctx.closePath();
+
+    ctx.fillStyle = `hsla(${hue}, 80%, 70%, 0.9)`;
+    ctx.fill();
+
+    if (useGlow) ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+}
+
+// ——— Metrics ———
+let lastFrameTime = performance.now();
+let fpsSmooth = 60;
+const elFPS = document.getElementById('mFPS');
+const elCount = document.getElementById('mCount');
+const elSpeed = document.getElementById('mSpeed');
+const elNeighbors = document.getElementById('mNeighbors');
+
+function updateMetrics() {
+  const now = performance.now();
+  const dt = now - lastFrameTime;
+  lastFrameTime = now;
+  const fps = 1000 / dt;
+  fpsSmooth = fpsSmooth * 0.9 + fps * 0.1;
+
+  let totalSpeed = 0, totalNeighbors = 0;
+  for (const b of boids) {
+    totalSpeed += Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+    totalNeighbors += b.neighborCount;
+  }
+  const n = boids.length || 1;
+
+  elFPS.textContent = Math.round(fpsSmooth);
+  elCount.textContent = boids.length;
+  elSpeed.textContent = (totalSpeed / n).toFixed(1);
+  elNeighbors.textContent = (totalNeighbors / n).toFixed(1);
+}
+
+// ——— Main Loop ———
+function loop() {
+  if (!paused) update();
+  draw();
+  updateMetrics();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ——— UI Event Handlers ———
+
+// Pause / Resume
+const btnPause = document.getElementById('btnPause');
+btnPause.addEventListener('click', () => {
+  paused = !paused;
+  btnPause.textContent = paused ? 'Resume' : 'Pause';
+  btnPause.classList.toggle('active', paused);
+});
+
+// Reset
+document.getElementById('btnReset').addEventListener('click', () => { initBoids(); });
+
+// Boundary mode
+const btnWrap = document.getElementById('btnWrap');
+const btnBounce = document.getElementById('btnBounce');
+btnWrap.addEventListener('click', () => {
+  boundaryMode = 'wrap';
+  btnWrap.classList.add('active');
+  btnBounce.classList.remove('active');
+});
+btnBounce.addEventListener('click', () => {
+  boundaryMode = 'bounce';
+  btnBounce.classList.add('active');
+  btnWrap.classList.remove('active');
+});
+
+// Team mode
+const btnTeamOff = document.getElementById('btnTeamOff');
+const btnTeamOn = document.getElementById('btnTeamOn');
+btnTeamOff.addEventListener('click', () => {
+  teamMode = false;
+  btnTeamOff.classList.add('active');
+  btnTeamOn.classList.remove('active');
+});
+btnTeamOn.addEventListener('click', () => {
+  teamMode = true;
+  btnTeamOn.classList.add('active');
+  btnTeamOff.classList.remove('active');
+});
+
+// Mouse interaction mode
+const mouseBtns = [
+  document.getElementById('btnMouseIgnore'),
+  document.getElementById('btnMouseRepel'),
+  document.getElementById('btnMouseAttract'),
+];
+const mouseModes = ['ignore', 'repel', 'attract'];
+mouseBtns.forEach((btn, i) => {
+  btn.addEventListener('click', () => {
+    mouseMode = mouseModes[i];
+    mouseBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// Presets
+function setPreset(sep, ali, coh, rad, spd) {
+  sliders.separation.value = sep; valDisplays.separation.textContent = sep.toFixed(1);
+  sliders.alignment.value = ali;  valDisplays.alignment.textContent = ali.toFixed(1);
+  sliders.cohesion.value = coh;   valDisplays.cohesion.textContent = coh.toFixed(1);
+  sliders.radius.value = rad;     valDisplays.radius.textContent = rad;
+  sliders.maxspeed.value = spd;   valDisplays.maxspeed.textContent = spd.toFixed(1);
+}
+
+document.getElementById('preSchool').addEventListener('click', () => setPreset(0.8, 2.5, 1.5, 60, 4));
+document.getElementById('preChaos').addEventListener('click', () => setPreset(1.5, 0.3, 0.3, 30, 6));
+document.getElementById('preCluster').addEventListener('click', () => setPreset(1.2, 1.0, 2.5, 80, 3));
+</script>
+</body>
+</html>
