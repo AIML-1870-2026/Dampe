@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turing Patterns Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="app">
+        <!-- ═══ Canvas Area ═══ -->
+        <div class="canvas-container">
+            <canvas id="simulation-canvas"></canvas>
+            <div class="canvas-overlay">
+                <span id="fps-counter">-- FPS</span>
+            </div>
+            <div id="error-message"></div>
+        </div>
+
+        <!-- ═══ Sidebar ═══ -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Turing Patterns</h1>
+                <div class="subtitle">Reaction-Diffusion Explorer</div>
+            </div>
+
+            <!-- ── Pattern Presets ── -->
+            <section class="panel">
+                <h2>Pattern Presets</h2>
+                <div class="preset-grid">
+                    <button class="preset-btn active" data-preset="spots">
+                        <div class="preset-icon">&#9679;</div>
+                        <span>Spots</span>
+                    </button>
+                    <button class="preset-btn" data-preset="stripes">
+                        <div class="preset-icon">&#9776;</div>
+                        <span>Stripes</span>
+                    </button>
+                    <button class="preset-btn" data-preset="spirals">
+                        <div class="preset-icon">&#10042;</div>
+                        <span>Spirals</span>
+                    </button>
+                    <button class="preset-btn" data-preset="coral">
+                        <div class="preset-icon">&#10047;</div>
+                        <span>Coral</span>
+                    </button>
+                    <button class="preset-btn" data-preset="labyrinth">
+                        <div class="preset-icon">&#10053;</div>
+                        <span>Labyrinth</span>
+                    </button>
+                    <button class="preset-btn" data-preset="waves">
+                        <div class="preset-icon">&#8776;</div>
+                        <span>Waves</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- ── Playback Controls ── -->
+            <section class="panel">
+                <h2>Playback</h2>
+                <div class="playback-row">
+                    <button id="play-pause" class="btn-primary playing">Pause</button>
+                    <button id="step" class="btn-secondary btn-icon" title="Step one frame">Step</button>
+                    <button id="reset" class="btn-secondary btn-icon" title="Reset simulation">Reset</button>
+                </div>
+                <div class="speed-row">
+                    <label>Speed</label>
+                    <input type="range" id="speed" min="0.25" max="4" step="0.25" value="1">
+                    <span id="speed-value" class="value">1x</span>
+                </div>
+            </section>
+
+            <!-- ── Fine-Tune Parameters ── -->
+            <section class="panel collapsible">
+                <h2 class="collapsible-toggle">Fine-Tune Parameters</h2>
+                <div class="collapsible-content">
+                    <div class="param-group">
+                        <div class="param-label">
+                            <label>Chemical Feed Rate (F)
+                                <span class="tooltip-icon" data-tip="How fast chemical A is added to the system">?</span>
+                            </label>
+                            <span id="feed-value" class="value">0.055</span>
+                        </div>
+                        <input type="range" id="feed" min="0.01" max="0.10" step="0.001" value="0.055">
+                    </div>
+
+                    <div class="param-group">
+                        <div class="param-label">
+                            <label>Chemical Kill Rate (k)
+                                <span class="tooltip-icon" data-tip="How fast chemical B is removed from the system">?</span>
+                            </label>
+                            <span id="kill-value" class="value">0.062</span>
+                        </div>
+                        <input type="range" id="kill" min="0.03" max="0.07" step="0.001" value="0.062">
+                    </div>
+
+                    <div class="param-group">
+                        <div class="param-label">
+                            <label>Diffusion Speed A (Da)
+                                <span class="tooltip-icon" data-tip="How fast chemical A spreads through space">?</span>
+                            </label>
+                            <span id="da-value" class="value">1.000</span>
+                        </div>
+                        <input type="range" id="da" min="0.5" max="2.0" step="0.05" value="1.0">
+                    </div>
+
+                    <div class="param-group">
+                        <div class="param-label">
+                            <label>Diffusion Speed B (Db)
+                                <span class="tooltip-icon" data-tip="How fast chemical B spreads through space">?</span>
+                            </label>
+                            <span id="db-value" class="value">0.500</span>
+                        </div>
+                        <input type="range" id="db" min="0.1" max="1.0" step="0.05" value="0.5">
+                    </div>
+
+                    <!-- Phase Diagram -->
+                    <div class="phase-diagram-wrap">
+                        <h3>Parameter Space</h3>
+                        <canvas id="phase-diagram" width="280" height="140"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── Color Scheme ── -->
+            <section class="panel">
+                <h2>Color Scheme</h2>
+                <div class="scheme-grid">
+                    <button class="scheme-btn" data-scheme="ocean">
+                        <div class="scheme-swatch" style="background: linear-gradient(90deg, #001133, #0055AA, #00DDFF)"></div>
+                        <span>Ocean</span>
+                    </button>
+                    <button class="scheme-btn" data-scheme="fire">
+                        <div class="scheme-swatch" style="background: linear-gradient(90deg, #000, #AA0000, #FF5500, #FFFF00)"></div>
+                        <span>Fire</span>
+                    </button>
+                    <button class="scheme-btn active" data-scheme="plasma">
+                        <div class="scheme-swatch" style="background: linear-gradient(90deg, #220055, #AA0055, #FF00AA, #FFAA00)"></div>
+                        <span>Plasma</span>
+                    </button>
+                    <button class="scheme-btn" data-scheme="forest">
+                        <div class="scheme-swatch" style="background: linear-gradient(90deg, #002200, #005500, #00AA00, #AAFF00)"></div>
+                        <span>Forest</span>
+                    </button>
+                    <button class="scheme-btn" data-scheme="monochrome">
+                        <div class="scheme-swatch" style="background: linear-gradient(90deg, #000, #888, #FFF)"></div>
+                        <span>Mono</span>
+                    </button>
+                    <button class="scheme-btn" data-scheme="neon">
+                        <div class="scheme-swatch" style="background: linear-gradient(90deg, #000022, #FF00FF, #00FFFF)"></div>
+                        <span>Neon</span>
+                    </button>
+                </div>
+                <div class="custom-colors">
+                    <label>Custom:</label>
+                    <input type="color" id="custom-color-1" value="#000033">
+                    <span style="color: #64748b; font-size: 11px;">to</span>
+                    <input type="color" id="custom-color-2" value="#00ffcc">
+                </div>
+            </section>
+
+            <!-- ── Canvas Settings ── -->
+            <section class="panel collapsible">
+                <h2 class="collapsible-toggle">Canvas Settings</h2>
+                <div class="collapsible-content">
+                    <div class="settings-row">
+                        <label>Grid Size</label>
+                        <select id="grid-size">
+                            <option value="small" selected>256 x 256</option>
+                            <option value="medium">512 x 512</option>
+                            <option value="large">1024 x 1024</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <label>Initial Pattern</label>
+                        <select id="init-pattern">
+                            <option value="random" selected>Random Seeds</option>
+                            <option value="center">Single Spot</option>
+                            <option value="multi">Multiple Spots</option>
+                        </select>
+                    </div>
+                    <div class="settings-row" style="margin-top: 8px;">
+                        <button id="screenshot" class="screenshot-btn">Save Screenshot (PNG)</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── Help ── -->
+            <section class="panel collapsible collapsed">
+                <h2 class="collapsible-toggle">What are Turing Patterns?</h2>
+                <div class="collapsible-content">
+                    <div class="help-text">
+                        <p>
+                            <strong>Turing patterns</strong> are self-organizing structures that emerge from
+                            reaction-diffusion systems. First described by Alan Turing in 1952, these patterns
+                            explain how uniform systems can spontaneously develop spots, stripes, and other
+                            complex structures.
+                        </p>
+                        <p>
+                            This simulation uses the <strong>Gray-Scott model</strong>, where two chemicals
+                            interact and diffuse at different rates. Chemical A is continuously fed into the
+                            system, while chemical B is gradually removed. Their interaction produces the
+                            stunning visual patterns you see.
+                        </p>
+                        <p>
+                            <strong>Click and drag</strong> on the canvas to add chemical B and create
+                            disturbances in the pattern. Try different presets and adjust the parameters
+                            to discover new patterns!
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="panel">
+                <div class="paint-hint">
+                    <div class="paint-hint-dot"></div>
+                    Click and drag on the canvas to paint
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <script src="js/presets.js"></script>
+    <script src="js/simulation.js"></script>
+    <script src="js/controls.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
