@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dampe - AI Coding Class</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #000;
+            color: #0f0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Canvas for Matrix falling code background */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        /* Content container */
+        .content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Main heading - name */
+        h1 {
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: bold;
+            color: #0f0;
+            text-shadow:
+                0 0 10px #0f0,
+                0 0 20px #0f0,
+                0 0 30px #0f0,
+                0 0 40px #0f0;
+            margin-bottom: 1rem;
+            letter-spacing: 0.1em;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        /* Subtext */
+        p {
+            font-size: clamp(1.2rem, 3vw, 2rem);
+            color: #0f0;
+            text-shadow:
+                0 0 5px #0f0,
+                0 0 10px #0f0,
+                0 0 15px #0f0;
+            letter-spacing: 0.05em;
+        }
+
+        /* Glow animation for heading */
+        @keyframes glow {
+            from {
+                text-shadow:
+                    0 0 10px #0f0,
+                    0 0 20px #0f0,
+                    0 0 30px #0f0,
+                    0 0 40px #0f0;
+            }
+            to {
+                text-shadow:
+                    0 0 20px #0f0,
+                    0 0 30px #0f0,
+                    0 0 40px #0f0,
+                    0 0 50px #0f0,
+                    0 0 60px #0f0;
+            }
+        }
+
+        /* Hyperspace button */
+        .hyperspace-btn {
+            margin-top: 2rem;
+            padding: 15px 40px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.2rem;
+            color: #0f0;
+            background: transparent;
+            border: 2px solid #0f0;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            box-shadow: 0 0 10px #0f0, inset 0 0 10px rgba(0, 255, 0, 0.1);
+        }
+
+        .hyperspace-btn:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 20px #0f0, 0 0 40px #0f0, inset 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .content {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Canvas for Matrix effect -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- Main content -->
+    <div class="content">
+        <h1>Dampe</h1>
+        <p>Hello, World! I'm ready to vibe code!</p>
+        <a href="hyperspace.html" class="hyperspace-btn">Enter Hyperspace</a>
+    </div>
+
+    <script>
+        // Get canvas and context
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set canvas size to window size
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Characters to use in the Matrix effect (mixture of letters, numbers, symbols)
+        const matrixChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%^&*()_+-=[]{}|;:,.<>?/~`';
+        const chars = matrixChars.split('');
+
+        // Font size and columns calculation
+        const fontSize = 16;
+        const columns = Math.floor(canvas.width / fontSize);
+
+        // Array to store drop positions for each column
+        const drops = Array(columns).fill(1);
+
+        // Array to store the current character for each position
+        const charMap = Array(columns).fill(0).map(() => Array(Math.floor(canvas.height / fontSize)).fill(''));
+
+        // Mouse position tracking
+        let mouseX = -1000;
+        let mouseY = -1000;
+        const interactionRadius = 100; // Radius of mouse interaction effect
+
+        // Track mouse movement
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        // Reset mouse position when leaving canvas
+        canvas.addEventListener('mouseleave', () => {
+            mouseX = -1000;
+            mouseY = -1000;
+        });
+
+        // Draw function for Matrix effect
+        function drawMatrix() {
+            // Semi-transparent black background for trail effect
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Set default text properties
+            ctx.font = fontSize + 'px monospace';
+
+            // Loop through each column
+            for (let i = 0; i < drops.length; i++) {
+                // Calculate character position
+                const x = i * fontSize;
+                const y = drops[i] * fontSize;
+                const colIndex = Math.floor(y / fontSize);
+
+                // Calculate distance from mouse
+                const distanceFromMouse = Math.sqrt(
+                    Math.pow(x - mouseX, 2) + Math.pow(y - mouseY, 2)
+                );
+
+                // Default color
+                let charColor = '#0f0';
+
+                // Apply mouse interaction effects
+                if (distanceFromMouse < interactionRadius) {
+                    // Calculate interaction strength (1 at center, 0 at radius edge)
+                    const strength = 1 - (distanceFromMouse / interactionRadius);
+
+                    // Change color to cyan/white when near cursor
+                    const colorIntensity = Math.floor(strength * 255);
+                    charColor = `rgb(${colorIntensity}, 255, ${255 - colorIntensity})`;
+
+                    // Slow down effect is implemented by conditionally skipping the drop increment below
+                }
+
+                // Select random character for this position
+                if (!charMap[i][colIndex]) {
+                    charMap[i][colIndex] = chars[Math.floor(Math.random() * chars.length)];
+                }
+                const text = charMap[i][colIndex];
+
+                // Draw the character
+                ctx.fillStyle = charColor;
+                ctx.fillText(text, x, y);
+
+                // Reset drops to top randomly and increment position
+                if (y > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                    // Clear the column in charMap
+                    charMap[i] = Array(Math.floor(canvas.height / fontSize)).fill('');
+                }
+
+                // Slow down drop when mouse is nearby, otherwise normal speed
+                if (distanceFromMouse > interactionRadius || Math.random() > 0.5) {
+                    drops[i]++;
+                }
+            }
+        }
+
+        // Animation loop
+        setInterval(drawMatrix, 50);
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Recalculate columns
+            const newColumns = Math.floor(canvas.width / fontSize);
+            drops.length = newColumns;
+            drops.fill(1);
+
+            // Reset charMap
+            charMap.length = newColumns;
+            for (let i = 0; i < newColumns; i++) {
+                charMap[i] = Array(Math.floor(canvas.height / fontSize)).fill('');
+            }
+        });
+    </script>
+</body>
+</html>
