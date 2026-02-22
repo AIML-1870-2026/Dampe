@@ -47,6 +47,7 @@ jobs:
           cp README.md deploy/
           cp -r dist deploy/readable
           touch deploy/.nojekyll
+          printf '<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="refresh" content="0;url=readable/"><title>Dampe Portfolio</title></head><body><a href="readable/">Go to Readable</a></body></html>' > deploy/index.html
 
       - uses: actions/upload-pages-artifact@v3
         with:
