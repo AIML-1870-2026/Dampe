@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
-  base: '/Dampe/',
-})
+  base: command === 'serve' ? '/' : '/Dampe/',
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-dom/client'],
+  },
+}))
