@@ -1,0 +1,2730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Hyperspace Star Field</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #00d4ff;
+            --secondary-color: #0099cc;
+            --accent-color: #ff6b35;
+            --danger-color: #ff3366;
+            --success-color: #00ff88;
+            --panel-bg: rgba(0, 20, 40, 0.85);
+            --panel-border: rgba(0, 212, 255, 0.5);
+            --text-color: #e0f7ff;
+            --text-dim: #7eb8c9;
+        }
+
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', 'Lucida Console', monospace;
+            color: var(--text-color);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #0a0a1a 0%, #000 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 1s ease-out;
+        }
+
+        #loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-title {
+            font-size: clamp(1.5rem, 5vw, 3rem);
+            color: var(--primary-color);
+            text-shadow: 0 0 20px var(--primary-color), 0 0 40px var(--primary-color);
+            margin-bottom: 30px;
+            letter-spacing: 4px;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .loading-bar-container {
+            width: 300px;
+            height: 4px;
+            background: rgba(0, 212, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .loading-bar {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+            box-shadow: 0 0 10px var(--primary-color);
+            transition: width 0.3s ease-out;
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 14px;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Instructions Overlay */
+        #instructions-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        #instructions-overlay.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .instructions-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 10px;
+            padding: 30px 40px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.3), inset 0 0 30px rgba(0, 212, 255, 0.05);
+        }
+
+        .instructions-panel h2 {
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px var(--primary-color);
+        }
+
+        .instructions-panel h3 {
+            color: var(--secondary-color);
+            margin: 15px 0 10px;
+            font-size: 1rem;
+        }
+
+        .instructions-panel p, .instructions-panel li {
+            color: var(--text-dim);
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .instructions-panel ul {
+            list-style: none;
+            padding-left: 10px;
+        }
+
+        .instructions-panel li::before {
+            content: "▸ ";
+            color: var(--primary-color);
+        }
+
+        .key-badge {
+            display: inline-block;
+            background: rgba(0, 212, 255, 0.2);
+            border: 1px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            margin: 2px;
+        }
+
+        .dismiss-btn {
+            display: block;
+            margin: 20px auto 0;
+            padding: 12px 40px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 5px;
+            color: #000;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .dismiss-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px var(--primary-color);
+        }
+
+        /* Settings Panel */
+        #settings-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            width: 320px;
+            max-height: calc(100vh - 20px);
+            overflow: hidden;
+        }
+
+        .settings-toggle {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: var(--primary-color);
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .settings-toggle:hover {
+            background: rgba(0, 212, 255, 0.15);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .settings-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .settings-toggle.open .settings-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .settings-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+        }
+
+        .settings-content.open {
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+
+        .settings-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .settings-content::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .settings-content::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 3px;
+        }
+
+        /* Controls Panel */
+        #controls-panel {
+            position: fixed;
+            top: 10px;
+            right: 340px;
+            z-index: 100;
+            width: 280px;
+            max-height: calc(100vh - 20px);
+            overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+            #controls-panel {
+                right: 10px;
+                top: 60px;
+                width: calc(100% - 20px);
+                max-width: 280px;
+            }
+        }
+
+        .controls-toggle {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: var(--primary-color);
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .controls-toggle:hover {
+            background: rgba(0, 212, 255, 0.15);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .controls-toggle-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .controls-toggle.open .controls-toggle-icon {
+            transform: rotate(180deg);
+        }
+
+        .controls-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease-out;
+            box-shadow: 0 0 30px rgba(0, 212, 255, 0.2);
+        }
+
+        .controls-content.open {
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+
+        .controls-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .controls-content::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .controls-content::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 3px;
+        }
+
+        .controls-inner {
+            padding: 15px;
+        }
+
+        .controls-section {
+            margin-bottom: 15px;
+        }
+
+        .controls-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .controls-section-title {
+            color: var(--primary-color);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .shortcut-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+
+        .shortcut-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .shortcut-key {
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            padding: 3px 8px;
+            color: var(--primary-color);
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .shortcut-desc {
+            color: var(--text-dim);
+            text-align: right;
+            flex: 1;
+            margin-left: 10px;
+        }
+
+        .settings-inner {
+            padding: 15px;
+        }
+
+        .settings-section {
+            margin-bottom: 20px;
+        }
+
+        .settings-section-title {
+            color: var(--primary-color);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.3);
+        }
+
+        .setting-row {
+            margin-bottom: 15px;
+        }
+
+        .setting-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .setting-value {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        /* Custom Sliders */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(0, 212, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary-color);
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px var(--primary-color);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 10px var(--primary-color);
+        }
+
+        /* Color Picker */
+        input[type="color"] {
+            -webkit-appearance: none;
+            width: 40px;
+            height: 30px;
+            border: 2px solid var(--panel-border);
+            border-radius: 4px;
+            cursor: pointer;
+            background: transparent;
+        }
+
+        input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 2px;
+        }
+
+        input[type="color"]::-webkit-color-swatch {
+            border-radius: 2px;
+            border: none;
+        }
+
+        /* Select Dropdown */
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(0, 20, 40, 0.8);
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        select:hover, select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+        }
+
+        select option {
+            background: #0a1525;
+            color: var(--text-color);
+        }
+
+        /* Toggle Switch */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: rgba(0, 212, 255, 0.2);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: var(--primary-color);
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: var(--text-color);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch.active::after {
+            left: 27px;
+            background: #000;
+        }
+
+        /* Preset Buttons */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .preset-btn {
+            padding: 10px 8px;
+            background: rgba(0, 20, 40, 0.6);
+            border: 1px solid var(--panel-border);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .preset-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .preset-btn.active {
+            background: var(--primary-color);
+            color: #000;
+            font-weight: bold;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .action-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .action-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .action-btn:hover::before {
+            left: 100%;
+        }
+
+        .hyperspace-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--success-color));
+            color: #000;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+
+        .hyperspace-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.5);
+        }
+
+        .hyperspace-btn:disabled {
+            background: #333;
+            color: #666;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .hyperspace-btn:disabled::before {
+            display: none;
+        }
+
+        .emergency-btn {
+            background: linear-gradient(135deg, var(--danger-color), #cc0044);
+            color: #fff;
+        }
+
+        .emergency-btn:hover {
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.5);
+        }
+
+        .emergency-btn.active {
+            background: linear-gradient(135deg, var(--success-color), #00cc66);
+            animation: emergencyPulse 0.5s ease infinite;
+        }
+
+        @keyframes emergencyPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.8); }
+        }
+
+        .reverse-btn {
+            background: linear-gradient(135deg, #9933ff, #6600cc);
+            color: #fff;
+        }
+
+        .reverse-btn.active {
+            background: linear-gradient(135deg, var(--accent-color), #cc4400);
+        }
+
+        /* HUD */
+        #hud {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 50;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        #hud.hidden {
+            opacity: 0;
+        }
+
+        .hud-container {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            padding: 15px 20px;
+            min-width: 200px;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+        }
+
+        .hud-title {
+            color: var(--primary-color);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .hud-label {
+            color: var(--text-dim);
+        }
+
+        .hud-value {
+            color: var(--primary-color);
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Speedometer */
+        .speedometer {
+            width: 120px;
+            height: 60px;
+            margin: 10px auto;
+            position: relative;
+            border: 2px solid var(--panel-border);
+            border-radius: 60px 60px 0 0;
+            background: rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        .speed-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: linear-gradient(0deg, var(--danger-color), var(--accent-color), var(--success-color), var(--primary-color));
+            transition: height 0.3s ease;
+        }
+
+        .speed-needle {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 2px;
+            height: 50px;
+            background: var(--danger-color);
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(-90deg);
+            transition: transform 0.2s ease;
+            box-shadow: 0 0 10px var(--danger-color);
+        }
+
+        .speed-text {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-color);
+            text-shadow: 0 0 10px var(--primary-color);
+        }
+
+        /* Direction Indicator */
+        .direction-indicator {
+            width: 60px;
+            height: 60px;
+            margin: 10px auto;
+            position: relative;
+            border: 2px solid var(--panel-border);
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .direction-arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 30px solid var(--primary-color);
+            transform-origin: center bottom;
+            transform: translate(-50%, -100%);
+            filter: drop-shadow(0 0 5px var(--primary-color));
+            transition: transform 0.1s ease;
+        }
+
+        .direction-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px var(--primary-color);
+        }
+
+        /* FPS Counter */
+        #fps-counter {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 100;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 12px;
+            color: var(--success-color);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #fps-counter.visible {
+            opacity: 1;
+        }
+
+        /* Screen Effects */
+        #screen-effects {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.7) 100%);
+            opacity: 0.8;
+            transition: opacity 0.5s ease;
+        }
+
+        .flash-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.1s ease;
+        }
+
+        .flash-overlay.active {
+            animation: flashEffect 0.5s ease-out forwards;
+        }
+
+        @keyframes flashEffect {
+            0% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+
+        /* Mobile Controls */
+        #mobile-controls {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            gap: 10px;
+        }
+
+        @media (max-width: 768px) {
+            #mobile-controls {
+                display: flex;
+                flex-direction: column;
+            }
+
+            #settings-panel {
+                width: calc(100% - 20px);
+                max-width: 320px;
+            }
+
+            .hud-container {
+                min-width: 150px;
+                padding: 10px 15px;
+            }
+
+            .speedometer {
+                width: 80px;
+                height: 40px;
+            }
+
+            .speed-needle {
+                height: 35px;
+            }
+
+            .direction-indicator {
+                width: 40px;
+                height: 40px;
+            }
+        }
+
+        .mobile-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid var(--panel-border);
+            background: var(--panel-bg);
+            color: var(--primary-color);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-btn:active {
+            background: var(--primary-color);
+            color: #000;
+            transform: scale(0.95);
+        }
+
+        /* Utility Buttons */
+        .utility-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .utility-btn {
+            flex: 1;
+            min-width: 80px;
+            padding: 8px;
+            background: rgba(0, 20, 40, 0.6);
+            border: 1px solid var(--panel-border);
+            border-radius: 4px;
+            color: var(--text-dim);
+            font-family: inherit;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .utility-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+            color: var(--primary-color);
+        }
+
+        /* Cooldown indicator */
+        .cooldown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .cooldown-overlay.active {
+            opacity: 1;
+        }
+
+        .cooldown-timer {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Notification toast */
+        #notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--panel-bg);
+            border: 2px solid var(--primary-color);
+            border-radius: 10px;
+            padding: 20px 40px;
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            text-align: center;
+            box-shadow: 0 0 30px var(--primary-color);
+        }
+
+        #notification.visible {
+            opacity: 1;
+        }
+
+        #notification h3 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+
+        #notification p {
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        /* Easter egg effects */
+        .konami-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 500;
+            background: linear-gradient(45deg,
+                rgba(255, 0, 0, 0.1),
+                rgba(255, 165, 0, 0.1),
+                rgba(255, 255, 0, 0.1),
+                rgba(0, 128, 0, 0.1),
+                rgba(0, 0, 255, 0.1),
+                rgba(75, 0, 130, 0.1),
+                rgba(238, 130, 238, 0.1));
+            opacity: 0;
+            animation: rainbowWave 2s ease-in-out;
+        }
+
+        @keyframes rainbowWave {
+            0% { opacity: 0; }
+            50% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* Screen shake */
+        .screen-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0); }
+            10%, 90% { transform: translate(-2px, -1px); }
+            20%, 80% { transform: translate(2px, 2px); }
+            30%, 70% { transform: translate(-3px, 0); }
+            40%, 60% { transform: translate(3px, -2px); }
+            50% { transform: translate(-2px, 2px); }
+        }
+
+        /* Credits overlay */
+        #credits-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        #credits-overlay.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .credits-content {
+            text-align: center;
+            color: var(--primary-color);
+        }
+
+        .credits-content h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px var(--primary-color);
+        }
+
+        .credits-content p {
+            color: var(--text-dim);
+            margin: 10px 0;
+        }
+
+        .credits-close {
+            margin-top: 30px;
+            padding: 10px 30px;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 5px;
+            color: #000;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .credits-close:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px var(--primary-color);
+        }
+
+        /* Lens flare effect */
+        .lens-flare {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+            pointer-events: none;
+            mix-blend-mode: screen;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-title">HYPERSPACE DRIVE</div>
+        <div class="loading-bar-container">
+            <div class="loading-bar" id="loading-bar"></div>
+        </div>
+        <div class="loading-text" id="loading-text">Initializing Hyperdrive...</div>
+    </div>
+
+    <!-- Instructions Overlay -->
+    <div id="instructions-overlay">
+        <div class="instructions-panel">
+            <h2>HYPERSPACE NAVIGATION</h2>
+            <h3>Controls</h3>
+            <ul>
+                <li>Move your <strong>mouse</strong> to steer the star field</li>
+                <li>Press <span class="key-badge">SPACE</span> for Hyperspace Jump</li>
+                <li>Press <span class="key-badge">E</span> for Emergency Stop</li>
+                <li>Press <span class="key-badge">R</span> for Reverse Mode</li>
+                <li>Press <span class="key-badge">A</span> to toggle Autopilot</li>
+            </ul>
+            <h3>Keyboard Shortcuts</h3>
+            <ul>
+                <li><span class="key-badge">1-5</span> Quick preset selection</li>
+                <li><span class="key-badge">S</span> Toggle settings menu</li>
+                <li><span class="key-badge">H</span> Toggle HUD display</li>
+                <li><span class="key-badge">F</span> Toggle fullscreen</li>
+                <li><span class="key-badge">ESC</span> Reset to defaults</li>
+            </ul>
+            <h3>Tips</h3>
+            <p>Try the preset modes for different space travel experiences. Experiment with settings to create your perfect hyperspace journey!</p>
+            <button class="dismiss-btn" id="dismiss-instructions">ENGAGE</button>
+        </div>
+    </div>
+
+    <!-- Main Canvas -->
+    <canvas id="canvas"></canvas>
+
+    <!-- Screen Effects Layer -->
+    <div id="screen-effects">
+        <div class="vignette" id="vignette"></div>
+        <div class="flash-overlay" id="flash-overlay"></div>
+    </div>
+
+    <!-- FPS Counter -->
+    <div id="fps-counter">FPS: 60</div>
+
+    <!-- Settings Panel -->
+    <div id="settings-panel">
+        <button class="settings-toggle" id="settings-toggle">
+            <span>SETTINGS</span>
+            <span class="settings-toggle-icon">▼</span>
+        </button>
+        <div class="settings-content" id="settings-content">
+            <div class="settings-inner">
+                <!-- Presets Section -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Preset Modes</div>
+                    <div class="preset-grid">
+                        <button class="preset-btn active" data-preset="classic">Classic Hyperspace</button>
+                        <button class="preset-btn" data-preset="warp">Warp Speed</button>
+                        <button class="preset-btn" data-preset="calm">Calm Cruise</button>
+                        <button class="preset-btn" data-preset="ludicrous">Ludicrous Speed</button>
+                        <button class="preset-btn" data-preset="psychedelic">Psychedelic</button>
+                        <button class="preset-btn" data-preset="custom">Custom</button>
+                    </div>
+                </div>
+
+                <!-- Basic Controls -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Basic Controls</div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Trail Length</span>
+                            <span class="setting-value" id="trail-value">50</span>
+                        </div>
+                        <input type="range" id="trail-length" min="1" max="100" value="50">
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Star Count</span>
+                            <span class="setting-value" id="count-value">500</span>
+                        </div>
+                        <input type="range" id="star-count" min="50" max="2000" value="500">
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Movement Speed</span>
+                            <span class="setting-value" id="speed-value">0.3x</span>
+                        </div>
+                        <input type="range" id="movement-speed" min="0.1" max="2" step="0.1" value="0.3">
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Spawn Radius</span>
+                            <span class="setting-value" id="spawn-value">10</span>
+                        </div>
+                        <input type="range" id="spawn-radius" min="0" max="50" value="10">
+                    </div>
+                </div>
+
+                <!-- Advanced Controls -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Advanced Controls</div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Color Theme</span>
+                        </div>
+                        <select id="color-theme">
+                            <option value="white">White (Classic)</option>
+                            <option value="blue">Blue (Cool Hyperspace)</option>
+                            <option value="red">Red (Danger Mode)</option>
+                            <option value="rainbow">Rainbow (Psychedelic)</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-row" id="custom-color-row" style="display: none;">
+                        <div class="setting-label">
+                            <span>Custom Color</span>
+                            <input type="color" id="custom-color" value="#00d4ff">
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Turbulence</span>
+                            <span class="setting-value" id="turbulence-value">0</span>
+                        </div>
+                        <input type="range" id="turbulence" min="0" max="100" value="0">
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Field of View</span>
+                            <span class="setting-value" id="fov-value">75</span>
+                        </div>
+                        <input type="range" id="fov" min="30" max="120" value="75">
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Glow Intensity</span>
+                            <span class="setting-value" id="glow-value">50</span>
+                        </div>
+                        <input type="range" id="glow-intensity" min="0" max="100" value="50">
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Background Color</span>
+                            <input type="color" id="bg-color" value="#000008">
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Camera Shake</span>
+                            <span class="setting-value" id="shake-value">0</span>
+                        </div>
+                        <input type="range" id="camera-shake" min="0" max="100" value="0">
+                    </div>
+                </div>
+
+                <!-- Performance Options -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Performance</div>
+
+                    <div class="setting-row">
+                        <div class="setting-label">
+                            <span>Quality Preset</span>
+                        </div>
+                        <select id="quality-preset">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="toggle-container">
+                            <span class="setting-label">Show FPS Counter</span>
+                            <div class="toggle-switch" id="fps-toggle"></div>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="toggle-container">
+                            <span class="setting-label">Show Vignette</span>
+                            <div class="toggle-switch active" id="vignette-toggle"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode Toggles -->
+                <div class="settings-section">
+                    <div class="settings-section-title">Mode Controls</div>
+
+                    <div class="setting-row">
+                        <div class="toggle-container">
+                            <span class="setting-label">Autopilot Mode</span>
+                            <div class="toggle-switch" id="autopilot-toggle"></div>
+                        </div>
+                    </div>
+
+                    <div class="setting-row">
+                        <div class="toggle-container">
+                            <span class="setting-label">Reverse Mode</span>
+                            <div class="toggle-switch" id="reverse-toggle"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="action-btn hyperspace-btn" id="hyperspace-btn">
+                        JUMP TO HYPERSPACE
+                        <div class="cooldown-overlay" id="hyperspace-cooldown">
+                            <span class="cooldown-timer" id="cooldown-timer">3</span>
+                        </div>
+                    </button>
+                    <button class="action-btn emergency-btn" id="emergency-btn">
+                        EMERGENCY STOP
+                    </button>
+                    <button class="action-btn reverse-btn" id="reverse-btn">
+                        REVERSE
+                    </button>
+                </div>
+
+                <!-- Utility Buttons -->
+                <div class="utility-buttons">
+                    <button class="utility-btn" id="screenshot-btn">Screenshot</button>
+                    <button class="utility-btn" id="share-btn">Share</button>
+                    <button class="utility-btn" id="reset-btn">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls Panel -->
+    <div id="controls-panel">
+        <button class="controls-toggle" id="controls-toggle">
+            <span>CONTROLS</span>
+            <span class="controls-toggle-icon">▼</span>
+        </button>
+        <div class="controls-content" id="controls-content">
+            <div class="controls-inner">
+                <!-- Keyboard Shortcuts -->
+                <div class="controls-section">
+                    <div class="controls-section-title">Keyboard Shortcuts</div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">SPACE</span>
+                        <span class="shortcut-desc">Jump to Hyperspace</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">E</span>
+                        <span class="shortcut-desc">Emergency Stop</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">R</span>
+                        <span class="shortcut-desc">Reverse Direction</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">A</span>
+                        <span class="shortcut-desc">Toggle Autopilot</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">S</span>
+                        <span class="shortcut-desc">Toggle Settings</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">H</span>
+                        <span class="shortcut-desc">Toggle HUD</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">F</span>
+                        <span class="shortcut-desc">Toggle Fullscreen</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">ESC</span>
+                        <span class="shortcut-desc">Exit Fullscreen / Close Menus</span>
+                    </div>
+                </div>
+
+                <!-- Preset Shortcuts -->
+                <div class="controls-section">
+                    <div class="controls-section-title">Preset Shortcuts</div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">1</span>
+                        <span class="shortcut-desc">Classic Hyperspace</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">2</span>
+                        <span class="shortcut-desc">Warp Speed</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">3</span>
+                        <span class="shortcut-desc">Calm Cruise</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">4</span>
+                        <span class="shortcut-desc">Ludicrous Speed</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">5</span>
+                        <span class="shortcut-desc">Psychedelic</span>
+                    </div>
+                </div>
+
+                <!-- Mouse Controls -->
+                <div class="controls-section">
+                    <div class="controls-section-title">Mouse Controls</div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">MOVE</span>
+                        <span class="shortcut-desc">Steer the star field</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">CLICK</span>
+                        <span class="shortcut-desc">Click center for surprise</span>
+                    </div>
+                </div>
+
+                <!-- Easter Eggs -->
+                <div class="controls-section">
+                    <div class="controls-section-title">Easter Eggs</div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">K E S S E L</span>
+                        <span class="shortcut-desc">Type for Kessel Run</span>
+                    </div>
+                    <div class="shortcut-row">
+                        <span class="shortcut-key">↑↑↓↓←→←→BA</span>
+                        <span class="shortcut-desc">Konami Code</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-container">
+            <div class="hud-title">Navigation System</div>
+
+            <div class="speedometer">
+                <div class="speed-fill" id="speed-fill"></div>
+                <div class="speed-needle" id="speed-needle"></div>
+                <div class="speed-text" id="speed-display">0</div>
+            </div>
+
+            <div class="direction-indicator">
+                <div class="direction-arrow" id="direction-arrow"></div>
+                <div class="direction-center"></div>
+            </div>
+
+            <div class="hud-row">
+                <span class="hud-label">Stars:</span>
+                <span class="hud-value" id="hud-stars">0</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">Distance:</span>
+                <span class="hud-value" id="hud-distance">0 ly</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">Coords:</span>
+                <span class="hud-value" id="hud-coords">0, 0, 0</span>
+            </div>
+            <div class="hud-row">
+                <span class="hud-label">Mode:</span>
+                <span class="hud-value" id="hud-mode">Manual</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls">
+        <button class="mobile-btn" id="mobile-hyperspace">⚡</button>
+        <button class="mobile-btn" id="mobile-emergency">■</button>
+        <button class="mobile-btn" id="mobile-reverse">◀</button>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification">
+        <h3 id="notification-title">Notification</h3>
+        <p id="notification-text">Message here</p>
+    </div>
+
+    <!-- Credits Overlay -->
+    <div id="credits-overlay">
+        <div class="credits-content">
+            <h2>HYPERSPACE STAR FIELD</h2>
+            <p>Created with passion for space exploration</p>
+            <p>Version 1.0</p>
+            <p style="margin-top: 20px; color: var(--primary-color);">
+                "The cosmos is within us. We are made of star-stuff."
+            </p>
+            <p style="font-size: 0.8rem;">- Carl Sagan</p>
+            <button class="credits-close" id="credits-close">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        // =============================================
+        // HYPERSPACE STAR FIELD - Main Application
+        // =============================================
+
+        (function() {
+            'use strict';
+
+            // =============================================
+            // Configuration & State
+            // =============================================
+            const CONFIG = {
+                defaults: {
+                    trailLength: 50,
+                    starCount: 500,
+                    speed: 0.3,
+                    spawnRadius: 10,
+                    colorTheme: 'white',
+                    customColor: '#00d4ff',
+                    turbulence: 0,
+                    fov: 75,
+                    glowIntensity: 50,
+                    bgColor: '#000008',
+                    cameraShake: 0,
+                    quality: 'medium',
+                    showFps: false,
+                    showVignette: true,
+                    autopilot: false,
+                    reverse: false,
+                    emergencyStop: false
+                },
+                quality: {
+                    low: { maxStars: 500, effects: false },
+                    medium: { maxStars: 1000, effects: true },
+                    high: { maxStars: 2000, effects: true }
+                },
+                presets: {
+                    classic: {
+                        trailLength: 50, starCount: 500, speed: 0.3, colorTheme: 'white',
+                        turbulence: 0, fov: 75, glowIntensity: 50, bgColor: '#000008'
+                    },
+                    warp: {
+                        trailLength: 80, starCount: 800, speed: 1.5, colorTheme: 'white',
+                        turbulence: 10, fov: 90, glowIntensity: 70, bgColor: '#000020'
+                    },
+                    calm: {
+                        trailLength: 20, starCount: 300, speed: 0.15, colorTheme: 'white',
+                        turbulence: 0, fov: 60, glowIntensity: 30, bgColor: '#050510'
+                    },
+                    ludicrous: {
+                        trailLength: 100, starCount: 1500, speed: 2, colorTheme: 'white',
+                        turbulence: 50, fov: 120, glowIntensity: 100, bgColor: '#000000'
+                    },
+                    psychedelic: {
+                        trailLength: 70, starCount: 1000, speed: 1.2, colorTheme: 'rainbow',
+                        turbulence: 80, fov: 100, glowIntensity: 80, bgColor: '#100020'
+                    }
+                }
+            };
+
+            const state = {
+                settings: { ...CONFIG.defaults },
+                stars: [],
+                specialObjects: [],
+                mouse: { x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5 },
+                direction: { x: 0, y: 0 },
+                isJumping: false,
+                jumpCooldown: false,
+                jumpEndTime: 0,
+                cooldownEndTime: 0,
+                distanceTraveled: 0,
+                coordinates: { x: 0, y: 0, z: 0 },
+                fps: 60,
+                frameCount: 0,
+                lastFpsUpdate: 0,
+                lastFrameTime: 0,
+                deltaTime: 0,
+                autopilotAngle: 0,
+                centerClickCount: 0,
+                centerClickTimer: null,
+                konamiIndex: 0,
+                typedChars: '',
+                currentPreset: 'classic',
+                settingsOpen: false,
+                controlsOpen: false,
+                hudVisible: true,
+                running: true,
+                hyperdriveMalfunction: false
+            };
+
+            const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+
+            let canvas, ctx;
+            const elements = {};
+
+            // =============================================
+            // Initialization
+            // =============================================
+            function init() {
+                canvas = document.getElementById('canvas');
+                ctx = canvas.getContext('2d');
+                cacheElements();
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+                loadSettings();
+                initStars();
+                setupEventListeners();
+                simulateLoading();
+            }
+
+            function cacheElements() {
+                const ids = [
+                    'settings-toggle', 'settings-content', 'trail-length', 'star-count',
+                    'movement-speed', 'spawn-radius', 'color-theme', 'custom-color',
+                    'custom-color-row', 'turbulence', 'fov', 'glow-intensity', 'bg-color',
+                    'camera-shake', 'quality-preset', 'fps-toggle', 'vignette-toggle',
+                    'autopilot-toggle', 'reverse-toggle', 'trail-value', 'count-value',
+                    'speed-value', 'spawn-value', 'turbulence-value', 'fov-value',
+                    'glow-value', 'shake-value', 'hyperspace-btn', 'emergency-btn',
+                    'reverse-btn', 'screenshot-btn', 'share-btn', 'reset-btn', 'hud',
+                    'speed-fill', 'speed-needle', 'speed-display', 'direction-arrow',
+                    'hud-stars', 'hud-distance', 'hud-coords', 'hud-mode', 'loading-screen',
+                    'loading-bar', 'loading-text', 'instructions-overlay', 'dismiss-instructions',
+                    'fps-counter', 'vignette', 'flash-overlay', 'notification',
+                    'notification-title', 'notification-text', 'hyperspace-cooldown',
+                    'cooldown-timer', 'credits-overlay', 'credits-close', 'mobile-hyperspace',
+                    'mobile-emergency', 'mobile-reverse', 'controls-toggle', 'controls-content'
+                ];
+
+                ids.forEach(id => {
+                    const camelId = id.replace(/-([a-z])/g, (m, c) => c.toUpperCase());
+                    elements[camelId] = document.getElementById(id);
+                });
+
+                elements.presetBtns = document.querySelectorAll('.preset-btn');
+            }
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+
+            function simulateLoading() {
+                const messages = [
+                    'Initializing Hyperdrive...',
+                    'Calibrating Star Charts...',
+                    'Charging Warp Coils...',
+                    'Synchronizing Navigation...',
+                    'Systems Online!'
+                ];
+
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 15 + 5;
+                    if (progress >= 100) {
+                        progress = 100;
+                        clearInterval(interval);
+                        elements.loadingBar.style.width = '100%';
+                        elements.loadingText.textContent = messages[4];
+
+                        setTimeout(() => {
+                            elements.loadingScreen.classList.add('hidden');
+                            if (!localStorage.getItem('hyperspace_visited')) {
+                                setTimeout(() => elements.instructionsOverlay.classList.add('visible'), 500);
+                            }
+                            requestAnimationFrame(animate);
+                        }, 500);
+                    } else {
+                        elements.loadingBar.style.width = progress + '%';
+                        elements.loadingText.textContent = messages[Math.min(Math.floor(progress / 25), 3)];
+                    }
+                }, 100);
+            }
+
+            // =============================================
+            // Star Classes
+            // =============================================
+            class Star {
+                constructor(fromCenter = true) {
+                    this.reset(fromCenter);
+                }
+
+                reset(fromCenter = true) {
+                    const cx = canvas.width / 2;
+                    const cy = canvas.height / 2;
+
+                    if (fromCenter) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const radius = Math.random() * state.settings.spawnRadius;
+                        this.x = cx + Math.cos(angle) * radius;
+                        this.y = cy + Math.sin(angle) * radius;
+                        this.z = Math.random() * 1000 + 500;
+                    } else {
+                        this.x = Math.random() * canvas.width;
+                        this.y = Math.random() * canvas.height;
+                        this.z = Math.random() * 1500 + 100;
+                    }
+
+                    this.baseSize = Math.random() * 0.8 + 0.2;
+                    this.brightness = Math.random() * 0.5 + 0.5;
+                    this.twinklePhase = Math.random() * Math.PI * 2;
+                    this.twinkleSpeed = Math.random() * 2 + 1;
+                    this.isGlowingStar = Math.random() < 0.03;
+                    if (this.isGlowingStar) {
+                        this.baseSize *= 1.5;
+                        this.brightness = 1;
+                    }
+                    this.trail = [];
+                    this.maxTrail = Math.floor(state.settings.trailLength / 2);
+                    this.depthLayer = Math.random();
+                    this.screenX = cx;
+                    this.screenY = cy;
+                    this.screenSize = 1;
+                }
+
+                update(deltaTime, speedMultiplier) {
+                    const cx = canvas.width / 2;
+                    const cy = canvas.height / 2;
+
+                    let steerX = (state.mouse.x - 0.5) * 2;
+                    let steerY = (state.mouse.y - 0.5) * 2;
+
+                    if (state.settings.turbulence > 0) {
+                        const t = state.settings.turbulence / 100;
+                        steerX += (Math.random() - 0.5) * t * 2;
+                        steerY += (Math.random() - 0.5) * t * 2;
+                    }
+
+                    let baseSpeed = state.settings.speed * speedMultiplier;
+                    baseSpeed *= 1 + (1 - this.depthLayer) * 0.5;
+
+                    if (state.settings.emergencyStop) baseSpeed *= 0.1;
+                    if (state.settings.reverse) baseSpeed *= -0.5;
+                    if (state.isJumping) baseSpeed *= 4;
+
+                    const speed = baseSpeed * (deltaTime / 16);
+                    this.z -= speed * 10;
+
+                    if (this.trail.length >= this.maxTrail) this.trail.shift();
+                    this.trail.push({ x: this.x, y: this.y, z: this.z });
+
+                    const fovRad = state.settings.fov * Math.PI / 180;
+                    const scale = Math.tan(fovRad / 2) * 500;
+
+                    if (this.z > 0) {
+                        this.screenX = cx + (this.x - cx) * scale / this.z;
+                        this.screenY = cy + (this.y - cy) * scale / this.z;
+                        this.screenSize = this.baseSize * scale / this.z;
+                    }
+
+                    this.twinklePhase += this.twinkleSpeed * deltaTime / 1000;
+
+                    if (this.z < 1 || this.z > 2000 ||
+                        this.screenX < -100 || this.screenX > canvas.width + 100 ||
+                        this.screenY < -100 || this.screenY > canvas.height + 100) {
+                        this.reset(true);
+                    }
+                }
+
+                draw(ctx) {
+                    if (this.z <= 0) return;
+
+                    const fovRad = state.settings.fov * Math.PI / 180;
+                    const scale = Math.tan(fovRad / 2) * 500;
+                    const cx = canvas.width / 2;
+                    const cy = canvas.height / 2;
+
+                    const color = this.getColor();
+                    const twinkle = 0.7 + 0.3 * Math.sin(this.twinklePhase);
+                    const brightness = this.brightness * twinkle;
+
+                    // Draw trail
+                    if (this.trail.length > 1 && state.settings.trailLength > 1) {
+                        ctx.beginPath();
+                        for (let i = 0; i < this.trail.length; i++) {
+                            const p = this.trail[i];
+                            if (p.z > 0) {
+                                const px = cx + (p.x - cx) * scale / p.z;
+                                const py = cy + (p.y - cy) * scale / p.z;
+                                if (i === 0) ctx.moveTo(px, py);
+                                else ctx.lineTo(px, py);
+                            }
+                        }
+                        ctx.strokeStyle = this.rgba(color, brightness * 0.3 * (state.settings.trailLength / 100));
+                        ctx.lineWidth = this.screenSize * 0.5;
+                        ctx.lineCap = 'round';
+                        ctx.stroke();
+                    }
+
+                    // Draw glow for special stars
+                    if (this.isGlowingStar && state.settings.glowIntensity > 0) {
+                        const glowSize = this.screenSize * 4 * (state.settings.glowIntensity / 100);
+                        const grad = ctx.createRadialGradient(
+                            this.screenX, this.screenY, 0,
+                            this.screenX, this.screenY, glowSize
+                        );
+                        grad.addColorStop(0, this.rgba(color, brightness * 0.8));
+                        grad.addColorStop(0.5, this.rgba(color, brightness * 0.3));
+                        grad.addColorStop(1, 'transparent');
+                        ctx.beginPath();
+                        ctx.arc(this.screenX, this.screenY, glowSize, 0, Math.PI * 2);
+                        ctx.fillStyle = grad;
+                        ctx.fill();
+                    }
+
+                    // Draw star
+                    ctx.beginPath();
+                    ctx.arc(this.screenX, this.screenY, this.screenSize, 0, Math.PI * 2);
+                    ctx.fillStyle = this.rgba(color, brightness);
+                    ctx.fill();
+
+                    // Extra glow for nearby stars
+                    if (this.z < 200 && state.settings.glowIntensity > 20) {
+                        const gi = (1 - this.z / 200) * (state.settings.glowIntensity / 100);
+                        const grad = ctx.createRadialGradient(
+                            this.screenX, this.screenY, 0,
+                            this.screenX, this.screenY, this.screenSize * 3
+                        );
+                        grad.addColorStop(0, this.rgba(color, gi * 0.5));
+                        grad.addColorStop(1, 'transparent');
+                        ctx.beginPath();
+                        ctx.arc(this.screenX, this.screenY, this.screenSize * 3, 0, Math.PI * 2);
+                        ctx.fillStyle = grad;
+                        ctx.fill();
+                    }
+                }
+
+                getColor() {
+                    const theme = state.settings.colorTheme;
+
+                    switch (theme) {
+                        case 'white': return '#ffffff';
+                        case 'blue': return 'rgb(150, 200, 255)';
+                        case 'red': return 'rgb(255, 150, 130)';
+                        case 'rainbow':
+                            const hue = (Date.now() / 20 + this.twinklePhase * 50) % 360;
+                            return `hsl(${hue}, 100%, 70%)`;
+                        case 'custom': return state.settings.customColor;
+                        default: return '#ffffff';
+                    }
+                }
+
+                rgba(color, alpha) {
+                    if (color.startsWith('rgb(')) {
+                        return color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+                    } else if (color.startsWith('hsl(')) {
+                        return color.replace('hsl(', 'hsla(').replace(')', `, ${alpha})`);
+                    } else {
+                        const r = parseInt(color.slice(1, 3), 16);
+                        const g = parseInt(color.slice(3, 5), 16);
+                        const b = parseInt(color.slice(5, 7), 16);
+                        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                    }
+                }
+            }
+
+            class SpecialObject {
+                constructor(type) {
+                    this.type = type;
+                    this.reset();
+                }
+
+                reset() {
+                    const edge = Math.floor(Math.random() * 4);
+                    switch (edge) {
+                        case 0:
+                            this.x = Math.random() * canvas.width;
+                            this.y = -50;
+                            this.vx = (Math.random() - 0.5) * 2;
+                            this.vy = Math.random() * 2 + 1;
+                            break;
+                        case 1:
+                            this.x = canvas.width + 50;
+                            this.y = Math.random() * canvas.height;
+                            this.vx = -(Math.random() * 2 + 1);
+                            this.vy = (Math.random() - 0.5) * 2;
+                            break;
+                        case 2:
+                            this.x = Math.random() * canvas.width;
+                            this.y = canvas.height + 50;
+                            this.vx = (Math.random() - 0.5) * 2;
+                            this.vy = -(Math.random() * 2 + 1);
+                            break;
+                        case 3:
+                            this.x = -50;
+                            this.y = Math.random() * canvas.height;
+                            this.vx = Math.random() * 2 + 1;
+                            this.vy = (Math.random() - 0.5) * 2;
+                            break;
+                    }
+
+                    this.active = true;
+
+                    switch (this.type) {
+                        case 'comet':
+                            this.size = Math.random() * 3 + 2;
+                            this.tailLength = Math.random() * 100 + 50;
+                            this.color = `hsl(${Math.random() * 60 + 180}, 80%, 70%)`;
+                            break;
+                        case 'shootingStar':
+                            this.size = Math.random() * 2 + 1;
+                            this.speed = Math.random() * 10 + 10;
+                            this.tailLength = Math.random() * 150 + 100;
+                            break;
+                        case 'planet':
+                            this.size = Math.random() * 30 + 20;
+                            this.color = `hsl(${Math.random() * 360}, 60%, 50%)`;
+                            this.rings = Math.random() > 0.5;
+                            this.vx *= 0.1;
+                            this.vy *= 0.1;
+                            break;
+                        case 'asteroid':
+                            this.size = Math.random() * 5 + 3;
+                            this.rotation = Math.random() * Math.PI * 2;
+                            this.rotationSpeed = (Math.random() - 0.5) * 0.1;
+                            this.vertices = this.genVertices();
+                            break;
+                        case 'nebula':
+                            this.size = Math.random() * 200 + 100;
+                            this.color = `hsla(${Math.random() * 360}, 70%, 50%, 0.1)`;
+                            this.vx *= 0.05;
+                            this.vy *= 0.05;
+                            break;
+                    }
+                }
+
+                genVertices() {
+                    const verts = [];
+                    const pts = Math.floor(Math.random() * 4) + 5;
+                    for (let i = 0; i < pts; i++) {
+                        const angle = (i / pts) * Math.PI * 2;
+                        const r = this.size * (0.7 + Math.random() * 0.6);
+                        verts.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+                    }
+                    return verts;
+                }
+
+                update(deltaTime) {
+                    if (!this.active) return;
+                    const speed = state.settings.speed * (deltaTime / 16);
+
+                    if (this.type === 'shootingStar') {
+                        this.x += this.vx * this.speed * speed;
+                        this.y += this.vy * this.speed * speed;
+                    } else {
+                        this.x += this.vx * speed;
+                        this.y += this.vy * speed;
+                    }
+
+                    if (this.type === 'asteroid') this.rotation += this.rotationSpeed;
+
+                    const margin = this.type === 'nebula' ? this.size : 100;
+                    if (this.x < -margin || this.x > canvas.width + margin ||
+                        this.y < -margin || this.y > canvas.height + margin) {
+                        this.active = false;
+                    }
+                }
+
+                draw(ctx) {
+                    if (!this.active) return;
+                    switch (this.type) {
+                        case 'comet': this.drawComet(ctx); break;
+                        case 'shootingStar': this.drawShootingStar(ctx); break;
+                        case 'planet': this.drawPlanet(ctx); break;
+                        case 'asteroid': this.drawAsteroid(ctx); break;
+                        case 'nebula': this.drawNebula(ctx); break;
+                    }
+                }
+
+                drawComet(ctx) {
+                    const grad = ctx.createLinearGradient(
+                        this.x, this.y,
+                        this.x - this.vx * this.tailLength,
+                        this.y - this.vy * this.tailLength
+                    );
+                    grad.addColorStop(0, this.color);
+                    grad.addColorStop(1, 'transparent');
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x - this.vx * this.tailLength, this.y - this.vy * this.tailLength);
+                    ctx.strokeStyle = grad;
+                    ctx.lineWidth = this.size * 2;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+
+                    const hGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 3);
+                    hGrad.addColorStop(0, '#ffffff');
+                    hGrad.addColorStop(0.3, this.color);
+                    hGrad.addColorStop(1, 'transparent');
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+                    ctx.fillStyle = hGrad;
+                    ctx.fill();
+                }
+
+                drawShootingStar(ctx) {
+                    const grad = ctx.createLinearGradient(
+                        this.x, this.y,
+                        this.x - this.vx * this.tailLength,
+                        this.y - this.vy * this.tailLength
+                    );
+                    grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                    grad.addColorStop(0.1, 'rgba(255, 255, 200, 0.8)');
+                    grad.addColorStop(1, 'transparent');
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(this.x - this.vx * this.tailLength, this.y - this.vy * this.tailLength);
+                    ctx.strokeStyle = grad;
+                    ctx.lineWidth = this.size;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
+
+                drawPlanet(ctx) {
+                    const gGrad = ctx.createRadialGradient(this.x, this.y, this.size * 0.8, this.x, this.y, this.size * 2);
+                    gGrad.addColorStop(0, this.color.replace('50%)', '30%, 0.3)').replace('hsl', 'hsla'));
+                    gGrad.addColorStop(1, 'transparent');
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size * 2, 0, Math.PI * 2);
+                    ctx.fillStyle = gGrad;
+                    ctx.fill();
+
+                    const pGrad = ctx.createRadialGradient(
+                        this.x - this.size * 0.3, this.y - this.size * 0.3, 0,
+                        this.x, this.y, this.size
+                    );
+                    pGrad.addColorStop(0, this.color.replace('50%)', '70%)'));
+                    pGrad.addColorStop(0.7, this.color);
+                    pGrad.addColorStop(1, this.color.replace('50%)', '20%)'));
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = pGrad;
+                    ctx.fill();
+
+                    if (this.rings) {
+                        ctx.beginPath();
+                        ctx.ellipse(this.x, this.y, this.size * 1.8, this.size * 0.3, Math.PI * 0.1, 0, Math.PI * 2);
+                        ctx.strokeStyle = this.color.replace('50%)', '60%, 0.5)').replace('hsl', 'hsla');
+                        ctx.lineWidth = 3;
+                        ctx.stroke();
+                    }
+                }
+
+                drawAsteroid(ctx) {
+                    ctx.save();
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.rotation);
+                    ctx.beginPath();
+                    ctx.moveTo(this.vertices[0].x, this.vertices[0].y);
+                    for (let i = 1; i < this.vertices.length; i++) {
+                        ctx.lineTo(this.vertices[i].x, this.vertices[i].y);
+                    }
+                    ctx.closePath();
+                    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+                    grad.addColorStop(0, '#a08060');
+                    grad.addColorStop(1, '#5a4030');
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                    ctx.strokeStyle = '#3a2820';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                drawNebula(ctx) {
+                    const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+                    grad.addColorStop(0, this.color);
+                    grad.addColorStop(0.5, this.color.replace('0.1)', '0.05)'));
+                    grad.addColorStop(1, 'transparent');
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fillStyle = grad;
+                    ctx.fill();
+                }
+            }
+
+            function initStars() {
+                state.stars = [];
+                const count = Math.min(state.settings.starCount, CONFIG.quality[state.settings.quality].maxStars);
+                for (let i = 0; i < count; i++) {
+                    state.stars.push(new Star(false));
+                }
+            }
+
+            function updateStarCount() {
+                const target = Math.min(state.settings.starCount, CONFIG.quality[state.settings.quality].maxStars);
+                while (state.stars.length < target) state.stars.push(new Star(true));
+                while (state.stars.length > target) state.stars.pop();
+            }
+
+            function updateStarTrails() {
+                state.stars.forEach(s => s.maxTrail = Math.floor(state.settings.trailLength / 2));
+            }
+
+            // =============================================
+            // Animation Loop
+            // =============================================
+            function animate(timestamp) {
+                if (!state.running) return;
+
+                if (!state.lastFrameTime) state.lastFrameTime = timestamp;
+                state.deltaTime = Math.min(timestamp - state.lastFrameTime, 50);
+                state.lastFrameTime = timestamp;
+
+                state.frameCount++;
+                if (timestamp - state.lastFpsUpdate >= 1000) {
+                    state.fps = state.frameCount;
+                    state.frameCount = 0;
+                    state.lastFpsUpdate = timestamp;
+                    if (state.settings.showFps) {
+                        elements.fpsCounter.textContent = `FPS: ${state.fps}`;
+                    }
+                }
+
+                update(state.deltaTime);
+                render();
+                requestAnimationFrame(animate);
+            }
+
+            function update(dt) {
+                state.mouse.x += (state.mouse.targetX - state.mouse.x) * 0.1;
+                state.mouse.y += (state.mouse.targetY - state.mouse.y) * 0.1;
+                state.direction.x = (state.mouse.x - 0.5) * 2;
+                state.direction.y = (state.mouse.y - 0.5) * 2;
+
+                if (state.settings.autopilot) {
+                    state.autopilotAngle += dt * 0.0005;
+                    const r = 0.3 + Math.sin(state.autopilotAngle * 0.5) * 0.2;
+                    state.mouse.targetX = 0.5 + Math.cos(state.autopilotAngle) * r;
+                    state.mouse.targetY = 0.5 + Math.sin(state.autopilotAngle * 0.7) * r;
+                }
+
+                if (state.isJumping && Date.now() >= state.jumpEndTime) state.isJumping = false;
+
+                if (state.jumpCooldown && Date.now() >= state.cooldownEndTime) {
+                    state.jumpCooldown = false;
+                    elements.hyperspaceCooldown.classList.remove('active');
+                    elements.hyperspaceBtn.disabled = false;
+                }
+
+                if (state.jumpCooldown) {
+                    elements.cooldownTimer.textContent = Math.ceil((state.cooldownEndTime - Date.now()) / 1000);
+                }
+
+                const speedMult = state.isJumping ? 4 : 1;
+
+                state.stars.forEach(s => s.update(dt, speedMult));
+                state.specialObjects.forEach(o => o.update(dt));
+                state.specialObjects = state.specialObjects.filter(o => o.active);
+
+                // Random spawns
+                if (Math.random() < 0.001 && state.specialObjects.length < 5) {
+                    const types = ['comet', 'shootingStar', 'asteroid', 'nebula'];
+                    state.specialObjects.push(new SpecialObject(types[Math.floor(Math.random() * types.length)]));
+                }
+
+                if (Math.random() < 0.0002 && !state.specialObjects.some(o => o.type === 'planet')) {
+                    state.specialObjects.push(new SpecialObject('planet'));
+                }
+
+                if (Math.random() < 0.0001 && !state.hyperdriveMalfunction) {
+                    triggerMalfunction();
+                }
+
+                const currentSpeed = state.settings.speed * speedMult *
+                    (state.settings.reverse ? -0.5 : 1) *
+                    (state.settings.emergencyStop ? 0.1 : 1);
+
+                state.distanceTraveled += Math.abs(currentSpeed) * dt * 0.001;
+                state.coordinates.x += state.direction.x * currentSpeed * dt * 0.01;
+                state.coordinates.y += state.direction.y * currentSpeed * dt * 0.01;
+                state.coordinates.z += currentSpeed * dt * 0.1;
+
+                if (state.settings.cameraShake > 0 && !state.settings.emergencyStop) {
+                    const shake = state.settings.cameraShake / 100 * currentSpeed * 0.5;
+                    canvas.style.transform = `translate(${(Math.random() - 0.5) * shake}px, ${(Math.random() - 0.5) * shake}px)`;
+                } else {
+                    canvas.style.transform = '';
+                }
+
+                updateHUD(currentSpeed);
+            }
+
+            function render() {
+                ctx.fillStyle = state.settings.bgColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                state.specialObjects.filter(o => o.type === 'nebula').forEach(o => o.draw(ctx));
+
+                const sorted = [...state.stars].sort((a, b) => b.z - a.z);
+                sorted.forEach(s => s.draw(ctx));
+
+                state.specialObjects.filter(o => o.type !== 'nebula').forEach(o => o.draw(ctx));
+            }
+
+            function updateHUD(speed) {
+                const norm = Math.min(Math.abs(speed) / 5, 1);
+                elements.speedFill.style.height = (norm * 100) + '%';
+                elements.speedNeedle.style.transform = `translateX(-50%) rotate(${-90 + norm * 180}deg)`;
+                elements.speedDisplay.textContent = Math.abs(speed).toFixed(1);
+
+                const angle = Math.atan2(state.direction.y, state.direction.x) * 180 / Math.PI + 90;
+                elements.directionArrow.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+
+                elements.hudStars.textContent = state.stars.length;
+                elements.hudDistance.textContent = formatDist(state.distanceTraveled);
+                elements.hudCoords.textContent = `${state.coordinates.x.toFixed(0)}, ${state.coordinates.y.toFixed(0)}, ${state.coordinates.z.toFixed(0)}`;
+                elements.hudMode.textContent = state.settings.autopilot ? 'Auto' : 'Manual';
+            }
+
+            function formatDist(d) {
+                if (d < 1000) return d.toFixed(1) + ' ly';
+                if (d < 1000000) return (d / 1000).toFixed(2) + ' kly';
+                return (d / 1000000).toFixed(2) + ' Mly';
+            }
+
+            // =============================================
+            // Event Handlers
+            // =============================================
+            function setupEventListeners() {
+                document.addEventListener('mousemove', e => {
+                    if (!state.settings.autopilot) {
+                        state.mouse.targetX = e.clientX / window.innerWidth;
+                        state.mouse.targetY = e.clientY / window.innerHeight;
+                    }
+                });
+
+                document.addEventListener('touchmove', e => {
+                    e.preventDefault();
+                    if (!state.settings.autopilot && e.touches.length > 0) {
+                        state.mouse.targetX = e.touches[0].clientX / window.innerWidth;
+                        state.mouse.targetY = e.touches[0].clientY / window.innerHeight;
+                    }
+                }, { passive: false });
+
+                document.addEventListener('touchstart', e => {
+                    if (e.touches.length > 0) {
+                        state.mouse.targetX = e.touches[0].clientX / window.innerWidth;
+                        state.mouse.targetY = e.touches[0].clientY / window.innerHeight;
+                    }
+                }, { passive: false });
+
+                document.addEventListener('keydown', handleKeyDown);
+                canvas.addEventListener('click', handleCanvasClick);
+
+                elements.settingsToggle.addEventListener('click', toggleSettings);
+                elements.controlsToggle.addEventListener('click', toggleControls);
+
+                // Sliders
+                const sliderMap = [
+                    ['trailLength', 'trailValue', 'trailLength', parseInt, v => v, updateStarTrails],
+                    ['starCount', 'countValue', 'starCount', parseInt, v => v, updateStarCount],
+                    ['movementSpeed', 'speedValue', 'speed', parseFloat, v => v.toFixed(1) + 'x', null],
+                    ['spawnRadius', 'spawnValue', 'spawnRadius', parseInt, v => v, null],
+                    ['turbulence', 'turbulenceValue', 'turbulence', parseInt, v => v, null],
+                    ['fov', 'fovValue', 'fov', parseInt, v => v, null],
+                    ['glowIntensity', 'glowValue', 'glowIntensity', parseInt, v => v, null],
+                    ['cameraShake', 'shakeValue', 'cameraShake', parseInt, v => v, null]
+                ];
+
+                sliderMap.forEach(([input, display, setting, parse, format, callback]) => {
+                    elements[input].addEventListener('input', () => {
+                        state.settings[setting] = parse(elements[input].value);
+                        elements[display].textContent = format(state.settings[setting]);
+                        if (callback) callback();
+                        markCustom();
+                    });
+                });
+
+                elements.colorTheme.addEventListener('change', () => {
+                    state.settings.colorTheme = elements.colorTheme.value;
+                    elements.customColorRow.style.display = state.settings.colorTheme === 'custom' ? 'block' : 'none';
+                    markCustom();
+                });
+
+                elements.customColor.addEventListener('input', () => {
+                    state.settings.customColor = elements.customColor.value;
+                    markCustom();
+                });
+
+                elements.bgColor.addEventListener('input', () => {
+                    state.settings.bgColor = elements.bgColor.value;
+                    markCustom();
+                });
+
+                elements.qualityPreset.addEventListener('change', () => {
+                    state.settings.quality = elements.qualityPreset.value;
+                    updateStarCount();
+                });
+
+                // Toggles
+                elements.fpsToggle.addEventListener('click', () => {
+                    state.settings.showFps = !state.settings.showFps;
+                    elements.fpsToggle.classList.toggle('active', state.settings.showFps);
+                    elements.fpsCounter.classList.toggle('visible', state.settings.showFps);
+                });
+
+                elements.vignetteToggle.addEventListener('click', () => {
+                    state.settings.showVignette = !state.settings.showVignette;
+                    elements.vignetteToggle.classList.toggle('active', state.settings.showVignette);
+                    elements.vignette.style.opacity = state.settings.showVignette ? '0.8' : '0';
+                });
+
+                elements.autopilotToggle.addEventListener('click', toggleAutopilot);
+                elements.reverseToggle.addEventListener('click', toggleReverse);
+
+                // Buttons
+                elements.hyperspaceBtn.addEventListener('click', triggerJump);
+                elements.emergencyBtn.addEventListener('click', toggleEmergency);
+                elements.reverseBtn.addEventListener('click', toggleReverse);
+                elements.screenshotBtn.addEventListener('click', takeScreenshot);
+                elements.shareBtn.addEventListener('click', shareSettings);
+                elements.resetBtn.addEventListener('click', resetDefaults);
+
+                elements.presetBtns.forEach(btn => {
+                    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+                });
+
+                elements.dismissInstructions.addEventListener('click', () => {
+                    elements.instructionsOverlay.classList.remove('visible');
+                    localStorage.setItem('hyperspace_visited', 'true');
+                });
+
+                elements.creditsClose.addEventListener('click', () => {
+                    elements.creditsOverlay.classList.remove('visible');
+                });
+
+                // Mobile
+                elements.mobileHyperspace.addEventListener('click', triggerJump);
+                elements.mobileEmergency.addEventListener('click', toggleEmergency);
+                elements.mobileReverse.addEventListener('click', toggleReverse);
+
+                loadURLParams();
+            }
+
+            function handleKeyDown(e) {
+                const key = e.key.toLowerCase();
+
+                // Konami code
+                if (e.key === KONAMI_CODE[state.konamiIndex]) {
+                    state.konamiIndex++;
+                    if (state.konamiIndex === KONAMI_CODE.length) {
+                        triggerKonami();
+                        state.konamiIndex = 0;
+                    }
+                } else {
+                    state.konamiIndex = 0;
+                }
+
+                // KESSEL RUN
+                state.typedChars += key;
+                if (state.typedChars.length > 10) state.typedChars = state.typedChars.slice(-10);
+                if (state.typedChars.includes('kesselrun')) {
+                    triggerKesselRun();
+                    state.typedChars = '';
+                }
+
+                switch (e.key) {
+                    case ' ':
+                        e.preventDefault();
+                        triggerJump();
+                        break;
+                    case 'e': case 'E': toggleEmergency(); break;
+                    case 'r': case 'R': toggleReverse(); break;
+                    case 'a': case 'A': toggleAutopilot(); break;
+                    case 's': case 'S': toggleSettings(); break;
+                    case 'h': case 'H': toggleHUD(); break;
+                    case 'f': case 'F': toggleFullscreen(); break;
+                    case 'Escape': resetDefaults(); break;
+                    case '1': applyPreset('classic'); break;
+                    case '2': applyPreset('warp'); break;
+                    case '3': applyPreset('calm'); break;
+                    case '4': applyPreset('ludicrous'); break;
+                    case '5': applyPreset('psychedelic'); break;
+                    case 'ArrowUp':
+                        if (!state.settings.autopilot) state.mouse.targetY = Math.max(0, state.mouse.targetY - 0.05);
+                        break;
+                    case 'ArrowDown':
+                        if (!state.settings.autopilot) state.mouse.targetY = Math.min(1, state.mouse.targetY + 0.05);
+                        break;
+                    case 'ArrowLeft':
+                        if (!state.settings.autopilot) state.mouse.targetX = Math.max(0, state.mouse.targetX - 0.05);
+                        break;
+                    case 'ArrowRight':
+                        if (!state.settings.autopilot) state.mouse.targetX = Math.min(1, state.mouse.targetX + 0.05);
+                        break;
+                }
+            }
+
+            function handleCanvasClick(e) {
+                const cx = canvas.width / 2;
+                const cy = canvas.height / 2;
+                const dist = Math.sqrt((e.clientX - cx) ** 2 + (e.clientY - cy) ** 2);
+
+                if (dist < 50) {
+                    state.centerClickCount++;
+                    if (state.centerClickTimer) clearTimeout(state.centerClickTimer);
+                    state.centerClickTimer = setTimeout(() => state.centerClickCount = 0, 2000);
+                    if (state.centerClickCount >= 10) {
+                        triggerSupernova();
+                        state.centerClickCount = 0;
+                    }
+                }
+            }
+
+            // =============================================
+            // Controls
+            // =============================================
+            function toggleSettings() {
+                state.settingsOpen = !state.settingsOpen;
+                elements.settingsToggle.classList.toggle('open', state.settingsOpen);
+                elements.settingsContent.classList.toggle('open', state.settingsOpen);
+            }
+
+            function toggleControls() {
+                state.controlsOpen = !state.controlsOpen;
+                elements.controlsToggle.classList.toggle('open', state.controlsOpen);
+                elements.controlsContent.classList.toggle('open', state.controlsOpen);
+            }
+
+            function toggleHUD() {
+                state.hudVisible = !state.hudVisible;
+                elements.hud.classList.toggle('hidden', !state.hudVisible);
+            }
+
+            function toggleFullscreen() {
+                if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                else document.exitFullscreen();
+            }
+
+            function triggerJump() {
+                if (state.jumpCooldown || state.isJumping) return;
+
+                state.isJumping = true;
+                state.jumpEndTime = Date.now() + 2000;
+                state.jumpCooldown = true;
+                state.cooldownEndTime = Date.now() + 5000;
+
+                elements.flashOverlay.classList.add('active');
+                setTimeout(() => elements.flashOverlay.classList.remove('active'), 500);
+
+                document.body.classList.add('screen-shake');
+                setTimeout(() => document.body.classList.remove('screen-shake'), 300);
+
+                elements.hyperspaceBtn.disabled = true;
+                elements.hyperspaceCooldown.classList.add('active');
+
+                notify('HYPERSPACE ENGAGED', 'Hold on tight!');
+            }
+
+            function toggleEmergency() {
+                state.settings.emergencyStop = !state.settings.emergencyStop;
+                elements.emergencyBtn.classList.toggle('active', state.settings.emergencyStop);
+                elements.emergencyBtn.textContent = state.settings.emergencyStop ? 'RESUME' : 'EMERGENCY STOP';
+                notify(state.settings.emergencyStop ? 'EMERGENCY STOP' : 'SYSTEMS ONLINE',
+                       state.settings.emergencyStop ? 'All systems decelerated' : 'Resuming normal operations');
+            }
+
+            function toggleReverse() {
+                state.settings.reverse = !state.settings.reverse;
+                elements.reverseBtn.classList.toggle('active', state.settings.reverse);
+                elements.reverseToggle.classList.toggle('active', state.settings.reverse);
+                notify(state.settings.reverse ? 'REVERSE ENGAGED' : 'FORWARD ENGAGED',
+                       state.settings.reverse ? 'Traveling backwards' : 'Normal direction');
+            }
+
+            function toggleAutopilot() {
+                state.settings.autopilot = !state.settings.autopilot;
+                elements.autopilotToggle.classList.toggle('active', state.settings.autopilot);
+                notify(state.settings.autopilot ? 'AUTOPILOT ON' : 'MANUAL CONTROL',
+                       state.settings.autopilot ? 'Sit back and enjoy' : 'You have the helm');
+            }
+
+            function applyPreset(name) {
+                const preset = CONFIG.presets[name];
+                if (!preset) {
+                    state.currentPreset = 'custom';
+                    updatePresetBtns();
+                    return;
+                }
+
+                Object.assign(state.settings, preset);
+                updateUI();
+                updateStarCount();
+                updateStarTrails();
+                state.currentPreset = name;
+                updatePresetBtns();
+                notify(name.toUpperCase(), 'Preset activated');
+                saveSettings();
+            }
+
+            function markCustom() {
+                state.currentPreset = 'custom';
+                updatePresetBtns();
+                saveSettings();
+            }
+
+            function updatePresetBtns() {
+                elements.presetBtns.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.preset === state.currentPreset);
+                });
+            }
+
+            function updateUI() {
+                elements.trailLength.value = state.settings.trailLength;
+                elements.trailValue.textContent = state.settings.trailLength;
+                elements.starCount.value = state.settings.starCount;
+                elements.countValue.textContent = state.settings.starCount;
+                elements.movementSpeed.value = state.settings.speed;
+                elements.speedValue.textContent = state.settings.speed.toFixed(1) + 'x';
+                elements.spawnRadius.value = state.settings.spawnRadius;
+                elements.spawnValue.textContent = state.settings.spawnRadius;
+                elements.colorTheme.value = state.settings.colorTheme;
+                elements.customColorRow.style.display = state.settings.colorTheme === 'custom' ? 'block' : 'none';
+                elements.customColor.value = state.settings.customColor;
+                elements.turbulence.value = state.settings.turbulence;
+                elements.turbulenceValue.textContent = state.settings.turbulence;
+                elements.fov.value = state.settings.fov;
+                elements.fovValue.textContent = state.settings.fov;
+                elements.glowIntensity.value = state.settings.glowIntensity;
+                elements.glowValue.textContent = state.settings.glowIntensity;
+                elements.bgColor.value = state.settings.bgColor;
+                elements.cameraShake.value = state.settings.cameraShake;
+                elements.shakeValue.textContent = state.settings.cameraShake;
+                elements.qualityPreset.value = state.settings.quality;
+                elements.fpsToggle.classList.toggle('active', state.settings.showFps);
+                elements.fpsCounter.classList.toggle('visible', state.settings.showFps);
+                elements.vignetteToggle.classList.toggle('active', state.settings.showVignette);
+                elements.vignette.style.opacity = state.settings.showVignette ? '0.8' : '0';
+                elements.autopilotToggle.classList.toggle('active', state.settings.autopilot);
+                elements.reverseToggle.classList.toggle('active', state.settings.reverse);
+            }
+
+            function resetDefaults() {
+                state.settings = { ...CONFIG.defaults };
+                updateUI();
+                updateStarCount();
+                updateStarTrails();
+                state.currentPreset = 'classic';
+                updatePresetBtns();
+                state.distanceTraveled = 0;
+                state.coordinates = { x: 0, y: 0, z: 0 };
+                elements.emergencyBtn.classList.remove('active');
+                elements.emergencyBtn.textContent = 'EMERGENCY STOP';
+                elements.reverseBtn.classList.remove('active');
+                notify('SYSTEMS RESET', 'All settings restored');
+                saveSettings();
+            }
+
+            // =============================================
+            // Storage & Sharing
+            // =============================================
+            function saveSettings() {
+                try {
+                    localStorage.setItem('hyperspace_settings', JSON.stringify(state.settings));
+                } catch (e) {}
+            }
+
+            function loadSettings() {
+                try {
+                    const saved = localStorage.getItem('hyperspace_settings');
+                    if (saved) {
+                        Object.assign(state.settings, JSON.parse(saved));
+                        updateUI();
+                    }
+                } catch (e) {}
+            }
+
+            function loadURLParams() {
+                const params = new URLSearchParams(window.location.search);
+                if (params.has('trail')) state.settings.trailLength = parseInt(params.get('trail'));
+                if (params.has('count')) state.settings.starCount = parseInt(params.get('count'));
+                if (params.has('speed')) state.settings.speed = parseFloat(params.get('speed'));
+                if (params.has('theme')) state.settings.colorTheme = params.get('theme');
+                if (params.has('turbulence')) state.settings.turbulence = parseInt(params.get('turbulence'));
+                if (params.has('fov')) state.settings.fov = parseInt(params.get('fov'));
+                if (params.has('glow')) state.settings.glowIntensity = parseInt(params.get('glow'));
+                if (params.has('bg')) state.settings.bgColor = '#' + params.get('bg');
+                updateUI();
+                updateStarCount();
+            }
+
+            function shareSettings() {
+                const params = new URLSearchParams();
+                params.set('trail', state.settings.trailLength);
+                params.set('count', state.settings.starCount);
+                params.set('speed', state.settings.speed);
+                params.set('theme', state.settings.colorTheme);
+                params.set('turbulence', state.settings.turbulence);
+                params.set('fov', state.settings.fov);
+                params.set('glow', state.settings.glowIntensity);
+                params.set('bg', state.settings.bgColor.replace('#', ''));
+
+                const url = window.location.origin + window.location.pathname + '?' + params.toString();
+                navigator.clipboard.writeText(url).then(() => {
+                    notify('LINK COPIED', 'Share URL copied to clipboard');
+                }).catch(() => {
+                    notify('SHARE URL', url);
+                });
+            }
+
+            function takeScreenshot() {
+                const link = document.createElement('a');
+                link.download = 'hyperspace-' + Date.now() + '.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                notify('SCREENSHOT SAVED', 'Image downloaded');
+            }
+
+            // =============================================
+            // Easter Eggs
+            // =============================================
+            function triggerKonami() {
+                notify('KONAMI CODE!', 'Developer mode activated!');
+                const effect = document.createElement('div');
+                effect.className = 'konami-effect';
+                document.body.appendChild(effect);
+                setTimeout(() => {
+                    effect.remove();
+                    elements.creditsOverlay.classList.add('visible');
+                }, 2000);
+            }
+
+            function triggerKesselRun() {
+                notify('KESSEL RUN', '12 parsecs activated!');
+                const orig = state.settings.speed;
+                state.settings.speed = 10;
+                elements.movementSpeed.value = 10;
+                elements.speedValue.textContent = '10.0x';
+                setTimeout(() => {
+                    state.settings.speed = orig;
+                    elements.movementSpeed.value = orig;
+                    elements.speedValue.textContent = orig.toFixed(1) + 'x';
+                    notify('KESSEL RUN COMPLETE', 'Speed normalized');
+                }, 5000);
+            }
+
+            function triggerSupernova() {
+                notify('SUPERNOVA!', 'You found the secret!');
+                for (let i = 0; i < 50; i++) {
+                    const star = new Star(true);
+                    star.isGlowingStar = true;
+                    star.baseSize = Math.random() * 3 + 2;
+                    state.stars.push(star);
+                }
+                elements.flashOverlay.classList.add('active');
+                setTimeout(() => elements.flashOverlay.classList.remove('active'), 500);
+                setTimeout(updateStarCount, 3000);
+            }
+
+            function triggerMalfunction() {
+                if (state.hyperdriveMalfunction) return;
+                state.hyperdriveMalfunction = true;
+                notify('MALFUNCTION!', 'Hyperdrive stabilizing...');
+
+                const origTurb = state.settings.turbulence;
+                const origSpeed = state.settings.speed;
+                state.settings.turbulence = 100;
+                state.settings.speed = Math.random() * 4 + 1;
+
+                const interval = setInterval(() => {
+                    state.mouse.targetX = Math.random();
+                    state.mouse.targetY = Math.random();
+                }, 200);
+
+                setTimeout(() => {
+                    clearInterval(interval);
+                    state.settings.turbulence = origTurb;
+                    state.settings.speed = origSpeed;
+                    state.hyperdriveMalfunction = false;
+                    notify('SYSTEMS STABILIZED', 'Hyperdrive online');
+                }, 3000);
+            }
+
+            // =============================================
+            // Notifications
+            // =============================================
+            function notify(title, msg) {
+                elements.notificationTitle.textContent = title;
+                elements.notificationText.textContent = msg;
+                elements.notification.classList.add('visible');
+                setTimeout(() => elements.notification.classList.remove('visible'), 2000);
+            }
+
+            // =============================================
+            // Start
+            // =============================================
+            document.addEventListener('DOMContentLoaded', init);
+        })();
+    </script>
+</body>
+</html>

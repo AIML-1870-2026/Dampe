@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decision Neuron — Should you go to bed?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+
+    <header>
+      <h1>Decision Neuron</h1>
+      <p class="tagline">Should you go to bed? Let the science decide.</p>
+    </header>
+
+    <div class="main-layout">
+      <aside class="sliders-sidebar" id="sliders-container">
+        <!-- Generated dynamically by script.js -->
+      </aside>
+
+      <main class="content-area">
+        <section class="neuron-section">
+          <canvas id="neuron-canvas"></canvas>
+          <div class="score-display">
+            <span id="score-value">50</span><span class="score-percent">%</span>
+          </div>
+          <div id="verdict-label" class="verdict-label">Maybe soon...</div>
+          <div id="sleep-info"></div>
+        </section>
+
+        <section class="message-section">
+          <p id="verdict-message" class="verdict-message"></p>
+          <button id="convince-btn" class="convince-btn">Convince Me</button>
+          <p id="convince-message" class="convince-message"></p>
+        </section>
+      </main>
+    </div>
+
+    <footer>
+      <p>Not a substitute for medical advice. But also, go to sleep.</p>
+    </footer>
+
+  </div>
+
+  <script src="messages.js"></script>
+  <script src="neuron.js"></script>
+  <script src="script.js"></script>
+
+</body>
+</html>

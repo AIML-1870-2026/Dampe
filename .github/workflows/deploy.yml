@@ -23,12 +23,25 @@ jobs:
 
       - run: npm run build
 
-      - name: Add .nojekyll
-        run: touch dist/.nojekyll
+      - name: Assemble deploy folder
+        run: |
+          mkdir -p deploy
+          cp -r AIML deploy/
+          cp -r Assignment-01 deploy/
+          cp -r Next-Gen-Coding deploy/
+          cp -r Snake-Game deploy/
+          cp -r Stellar-Web deploy/
+          cp -r decision-neuron deploy/
+          cp -r julia-set-explorer deploy/
+          cp -r rgb-color-lab deploy/
+          cp -r turing-patterns deploy/
+          cp README.md deploy/
+          cp -r dist deploy/readable
+          touch deploy/.nojekyll
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+          publish_dir: ./deploy
           force_orphan: true
