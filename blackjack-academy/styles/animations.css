@@ -1,0 +1,199 @@
+/* ═══════════════════════════════════════════════════════════
+   BLACKJACK ACADEMY  —  Animations & Transitions
+═══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════
+   FLAME  (torch flicker)
+══════════════════════════════════════════ */
+@keyframes flicker {
+  0%   { transform: scaleX(1)   scaleY(1)   rotate(-2deg); opacity: 0.9; }
+  25%  { transform: scaleX(0.9) scaleY(1.1) rotate(3deg);  opacity: 1; }
+  50%  { transform: scaleX(1.1) scaleY(0.9) rotate(-1deg); opacity: 0.85; }
+  75%  { transform: scaleX(0.95)scaleY(1.05)rotate(2deg);  opacity: 0.95; }
+  100% { transform: scaleX(1)   scaleY(1)   rotate(0deg);  opacity: 1; }
+}
+
+/* ══════════════════════════════════════════
+   UI FADE / SLIDE
+══════════════════════════════════════════ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes slideDown {
+  from { transform: translateX(-50%) translateY(-20px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(30px) scale(0.95); opacity: 0; }
+  to   { transform: translateY(0)    scale(1);    opacity: 1; }
+}
+
+/* ══════════════════════════════════════════
+   HAND OUTCOME POP
+══════════════════════════════════════════ */
+@keyframes outcome-pop {
+  0%   { transform: scale(0.5) translateY(10px); opacity: 0; }
+  70%  { transform: scale(1.1) translateY(-2px); }
+  100% { transform: scale(1)   translateY(0);    opacity: 1; }
+}
+
+/* ══════════════════════════════════════════
+   BOOK PULSE  (recommended button glow)
+══════════════════════════════════════════ */
+@keyframes book-pulse {
+  from { box-shadow: 0 0 0 2px rgba(240,208,96,0.4), 0 0 15px rgba(212,175,55,0.3); }
+  to   { box-shadow: 0 0 0 4px rgba(240,208,96,0.6), 0 0 30px rgba(212,175,55,0.6); }
+}
+
+/* ══════════════════════════════════════════
+   SCROLL UNROLL  (book panel)
+══════════════════════════════════════════ */
+@keyframes unroll {
+  0%   { clip-path: inset(50% 0 50% 0); opacity: 0; transform: scaleY(0.1); }
+  60%  { clip-path: inset(0% 0 0% 0);   opacity: 1; transform: scaleY(1.02); }
+  100% { clip-path: inset(0);            opacity: 1; transform: scaleY(1); }
+}
+
+/* ══════════════════════════════════════════
+   CHIP POP  (feedback on chip click)
+══════════════════════════════════════════ */
+@keyframes chip-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.18) translateY(-4px); }
+  70%  { transform: scale(0.95) translateY(1px); }
+  100% { transform: scale(1); }
+}
+.chip-pop { animation: chip-pop 0.28s ease !important; }
+
+/* ══════════════════════════════════════════
+   SHUFFLE CARD
+══════════════════════════════════════════ */
+@keyframes shuffleCard {
+  0%   { transform: translateY(0) rotate(-4deg); }
+  50%  { transform: translateY(-15px) rotate(4deg); }
+  100% { transform: translateY(0) rotate(-2deg); }
+}
+
+/* ══════════════════════════════════════════
+   SHIMMER  (shuffle text)
+══════════════════════════════════════════ */
+@keyframes shimmer {
+  from { opacity: 0.6; text-shadow: none; }
+  to   { opacity: 1;   text-shadow: 0 0 20px rgba(212,175,55,0.8); }
+}
+
+/* ══════════════════════════════════════════
+   SPARKLE  (blackjack celebration)
+══════════════════════════════════════════ */
+@keyframes sparkle-pop {
+  0%   { transform: scale(0) translateY(0); opacity: 1; }
+  50%  { opacity: 1; }
+  100% { transform: scale(1.5) translateY(-30px); opacity: 0; }
+}
+
+/* ══════════════════════════════════════════
+   CARD WIN GLOW PULSE
+══════════════════════════════════════════ */
+@keyframes winGlow {
+  0%   { box-shadow: 0 0 0 2px rgba(74,222,128,0.3),  0 0 15px rgba(74,222,128,0.15); }
+  50%  { box-shadow: 0 0 0 4px rgba(74,222,128,0.5),  0 0 35px rgba(74,222,128,0.35); }
+  100% { box-shadow: 0 0 0 2px rgba(74,222,128,0.3),  0 0 15px rgba(74,222,128,0.15); }
+}
+.hand-win-glow {
+  animation: winGlow 1.2s ease 3;
+}
+
+/* ══════════════════════════════════════════
+   BUST SHAKE
+══════════════════════════════════════════ */
+@keyframes bustShake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-5px) rotate(-1deg); }
+  40%      { transform: translateX(5px)  rotate(1deg); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+
+/* ══════════════════════════════════════════
+   TABLE MESSAGE TRANSITIONS
+══════════════════════════════════════════ */
+#table-message {
+  transition: opacity 0.3s ease;
+}
+
+/* ══════════════════════════════════════════
+   BUTTON PRESS FEEL
+══════════════════════════════════════════ */
+.btn-action:active:not(:disabled),
+.btn-deal:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+
+/* ══════════════════════════════════════════
+   ACTION BAR ENTRANCE
+══════════════════════════════════════════ */
+#action-bar:not(.hidden) {
+  animation: slideUp 0.25s ease;
+}
+
+/* ══════════════════════════════════════════
+   BETTING BAR ENTRANCE
+══════════════════════════════════════════ */
+#betting-bar:not(.hidden) {
+  animation: fadeIn 0.3s ease;
+}
+
+/* ══════════════════════════════════════════
+   COUNTER PANEL ENTRANCE
+══════════════════════════════════════════ */
+#counter-panel:not(.hidden) {
+  animation: fadeIn 0.4s ease;
+}
+
+/* ══════════════════════════════════════════
+   BOOK PANEL
+══════════════════════════════════════════ */
+#book-panel:not(.hidden) {
+  animation: fadeIn 0.2s ease;
+}
+.book-open #book-scroll {
+  animation: unroll 0.35s cubic-bezier(.22,.68,0,1.1);
+}
+
+/* ══════════════════════════════════════════
+   DEAL BOUNCE SETTLE  (applied via JS)
+══════════════════════════════════════════ */
+@keyframes cardSettle {
+  0%   { transform: translateY(0); }
+  30%  { transform: translateY(-5px); }
+  60%  { transform: translateY(2px); }
+  80%  { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
+}
+.card.settled {
+  animation: cardSettle 0.35s ease;
+}
+
+/* ══════════════════════════════════════════
+   BLACKJACK TITLE SHIMMER
+══════════════════════════════════════════ */
+@keyframes titleShimmer {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+#game-title {
+  background: linear-gradient(90deg,
+    var(--c-gold-dark), var(--c-gold-light), var(--c-gold), var(--c-gold-light), var(--c-gold-dark)
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: titleShimmer 4s ease infinite;
+}

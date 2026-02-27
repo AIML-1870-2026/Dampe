@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackjack Academy ⚔️</title>
+
+  <!-- Medieval fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles/main.css">
+  <link rel="stylesheet" href="styles/cards.css">
+  <link rel="stylesheet" href="styles/animations.css">
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     CASTLE BACKDROP
+══════════════════════════════════════════════════════════ -->
+<div id="castle-backdrop" aria-hidden="true">
+  <div class="stars"></div>
+  <div class="castle-silhouette">
+    <svg viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,300 L0,220 L40,220 L40,180 L60,180 L60,160 L80,160 L80,180 L100,180 L100,220
+        L140,220 L140,150 L160,150 L160,120 L180,120 L180,150 L200,150 L200,220
+        L260,220 L260,190 L280,190 L280,160 L300,160 L300,190 L320,190 L320,220
+        L380,220 L380,130 L400,130 L400,100 L420,100 L420,70 L440,70 L440,100 L460,100 L460,130 L480,130
+        L480,180 L520,180 L520,130 L560,130 L560,100 L580,100 L580,70 L600,70 L600,100 L620,100
+        L620,130 L660,130 L660,180 L700,180 L700,130 L720,130 L720,100 L740,100 L740,70 L760,70
+        L760,100 L780,100 L780,130 L820,130 L820,220 L880,220 L880,190 L900,190 L900,160 L920,160
+        L920,190 L940,190 L940,220 L1000,220 L1000,150 L1020,150 L1020,120 L1040,120 L1040,150
+        L1060,150 L1060,220 L1100,220 L1100,180 L1120,180 L1120,160 L1140,160 L1140,180 L1160,180
+        L1160,220 L1200,220 L1200,300 Z"
+        fill="#1a0a2e" opacity="0.9"/>
+    </svg>
+  </div>
+  <div class="torch torch-left">  <div class="flame"></div></div>
+  <div class="torch torch-right"><div class="flame"></div></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     GAME WRAPPER
+══════════════════════════════════════════════════════════ -->
+<div id="game-wrapper">
+
+  <!-- ── Header ── -->
+  <header id="game-header">
+    <div id="header-left">
+      <h1 id="game-title"><span class="title-sword">⚔</span> Blackjack Academy <span class="title-sword">⚔</span></h1>
+    </div>
+    <div id="header-right">
+      <div id="bankroll-panel">
+        <span class="panel-label">Treasury</span>
+        <span id="bankroll-display" class="panel-value">1,000</span>
+        <span class="panel-unit">gold</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main Table ── -->
+  <main id="table-outer">
+    <div id="table-frame">
+      <div id="felt-surface">
+
+        <!-- ── Top Bar: Shoe + Counter ── -->
+        <div id="top-bar">
+
+          <!-- Shoe indicator -->
+          <div id="shoe-indicator">
+            <div class="indicator-label">🃏 Shoe</div>
+            <div id="shoe-bar-track">
+              <div id="shoe-progress" class="shoe-fill"></div>
+            </div>
+            <div id="shoe-info">
+              <span id="shoe-pct">0%</span>&nbsp;dealt &bull;
+              <span id="shoe-cards">415</span> remaining
+            </div>
+          </div>
+
+          <!-- Card counter (hidden by default) -->
+          <div id="counter-panel" class="hidden">
+            <div class="counter-title">⚖ Hi-Lo Counter</div>
+            <table class="counter-table">
+              <tr><td>Running</td><td id="running-count" class="count-val">0</td></tr>
+              <tr><td>True</td>   <td id="true-count"    class="count-val">0.0</td></tr>
+              <tr><td>Decks</td>  <td id="decks-remaining" class="count-val">8.0</td></tr>
+            </table>
+            <div id="count-label" class="count-label">⚖ Neutral</div>
+          </div>
+        </div>
+
+        <!-- ── Dealer Area ── -->
+        <section id="dealer-section" aria-label="Dealer's hand">
+          <div class="section-label">Dealer</div>
+          <div id="dealer-hand" class="card-row" role="list" aria-label="Dealer cards"></div>
+          <div id="dealer-value" class="hand-value"></div>
+        </section>
+
+        <!-- ── Divider / Message ── -->
+        <div id="table-divider">
+          <div id="table-message">Place your bet to begin</div>
+        </div>
+
+        <!-- ── Player Area ── -->
+        <section id="player-section" aria-label="Player's hands">
+          <div id="player-area" class="hands-row"></div>
+          <div id="bet-display">
+            <span class="bet-label">Bet:</span>
+            <span class="bet-gold">$</span><span id="bet-amount">0</span>
+          </div>
+        </section>
+
+        <!-- ── Action Buttons (Player Turn) ── -->
+        <div id="action-bar" class="controls-strip hidden" role="toolbar" aria-label="Game actions">
+          <button id="btn-book" class="btn btn-book" title="Ask basic strategy for advice (B)" aria-label="Ask the Book">
+            <span class="btn-icon">📜</span>
+            <span class="btn-label">Ask the Book</span>
+          </button>
+          <div class="action-separator"></div>
+          <button id="btn-hit"    class="btn btn-action" title="Take another card (H)" accesskey="h">
+            <span class="btn-icon">👊</span><span class="btn-label">Hit</span>
+          </button>
+          <button id="btn-stand"  class="btn btn-action" title="Keep your hand (S)" accesskey="s">
+            <span class="btn-icon">🛡</span><span class="btn-label">Stand</span>
+          </button>
+          <button id="btn-double" class="btn btn-action" title="Double down (D)" accesskey="d">
+            <span class="btn-icon">✦✦</span><span class="btn-label">Double</span>
+          </button>
+          <button id="btn-split"  class="btn btn-action" title="Split pair (P)" accesskey="p">
+            <span class="btn-icon">⚔</span><span class="btn-label">Split</span>
+          </button>
+        </div>
+
+        <!-- ── Betting Bar ── -->
+        <div id="betting-bar" class="controls-strip" role="toolbar" aria-label="Betting controls">
+          <div id="chip-tray" role="group" aria-label="Chip denominations">
+            <button class="chip-btn chip-10"  data-amount="10"  title="Add $10">
+              <span class="chip-face">$10</span>
+            </button>
+            <button class="chip-btn chip-25"  data-amount="25"  title="Add $25">
+              <span class="chip-face">$25</span>
+            </button>
+            <button class="chip-btn chip-50"  data-amount="50"  title="Add $50">
+              <span class="chip-face">$50</span>
+            </button>
+            <button class="chip-btn chip-100" data-amount="100" title="Add $100">
+              <span class="chip-face">$100</span>
+            </button>
+          </div>
+          <div class="bet-actions">
+            <button id="btn-deal"      class="btn btn-deal"      title="Deal cards (Enter)">Deal</button>
+            <button id="btn-clear-bet" class="btn btn-secondary" title="Clear current bet">Clear</button>
+            <button id="btn-rebet"     class="btn btn-secondary" title="Repeat last bet">Rebet</button>
+          </div>
+        </div>
+
+        <!-- ── Settings Bar ── -->
+        <div id="settings-bar">
+          <button id="btn-toggle-counter" class="btn-setting" title="Toggle card counting display">
+            Counter: <span>OFF</span>
+          </button>
+          <button id="btn-speed" class="btn-setting" title="Change animation speed">
+            Speed: Normal
+          </button>
+          <button id="btn-new-shoe" class="btn-setting" title="Force a new shoe shuffle">
+            New Shoe
+          </button>
+        </div>
+
+      </div><!-- /felt-surface -->
+    </div><!-- /table-frame -->
+  </main>
+
+  <!-- ── Stats Sidebar ── -->
+  <aside id="stats-panel" aria-label="Session statistics">
+    <div class="stats-title">Session</div>
+    <div class="stat-row"><span class="stat-label">Hands</span>  <span id="stat-hands"  class="stat-val">0</span></div>
+    <div class="stat-row"><span class="stat-label">Won</span>    <span id="stat-won"    class="stat-val won-color">0</span></div>
+    <div class="stat-row"><span class="stat-label">Lost</span>   <span id="stat-lost"   class="stat-val lost-color">0</span></div>
+    <div class="stat-row"><span class="stat-label">Push</span>   <span id="stat-pushed" class="stat-val">0</span></div>
+    <div class="stat-row bj-row"><span class="stat-label">BJ</span> <span id="stat-bj" class="stat-val bj-color">0</span></div>
+
+    <div class="stats-divider"></div>
+    <div class="key-legend">
+      <div class="legend-title">Keys</div>
+      <div class="legend-row"><kbd>H</kbd> Hit</div>
+      <div class="legend-row"><kbd>S</kbd> Stand</div>
+      <div class="legend-row"><kbd>D</kbd> Double</div>
+      <div class="legend-row"><kbd>P</kbd> Split</div>
+      <div class="legend-row"><kbd>B</kbd> Book</div>
+      <div class="legend-row"><kbd>↵</kbd> Deal</div>
+    </div>
+  </aside>
+
+</div><!-- /game-wrapper -->
+
+<!-- ══════════════════════════════════════════════════════════
+     MODALS & OVERLAYS
+══════════════════════════════════════════════════════════ -->
+
+<!-- Insurance offer -->
+<div id="insurance-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Insurance offer">
+  <div class="modal-box">
+    <div class="modal-icon">⚜</div>
+    <h2 class="modal-title">Insurance?</h2>
+    <p class="modal-body">
+      The dealer reveals an <strong>Ace</strong>.<br>
+      Would you like to take insurance against a dealer Blackjack?
+    </p>
+    <p class="modal-info">
+      Cost: <strong>$<span id="insurance-cost">0</span></strong> &bull; Pays <strong>2:1</strong> if dealer has Blackjack
+    </p>
+    <div class="modal-buttons">
+      <button id="btn-take-insurance"    class="btn btn-action">Take Insurance</button>
+      <button id="btn-decline-insurance" class="btn btn-secondary">No Thanks</button>
+    </div>
+  </div>
+</div>
+
+<!-- Book / Strategy Panel -->
+<div id="book-panel" class="hidden" role="dialog" aria-modal="true" aria-label="Basic strategy advice">
+  <div id="book-inner">
+    <div id="book-scroll">
+      <div class="scroll-header">
+        <span class="scroll-ornament">❧</span>
+        <span class="scroll-title">The Book of Strategy</span>
+        <span class="scroll-ornament">❧</span>
+      </div>
+      <div id="book-action" class="book-action-text">HIT</div>
+      <div id="book-explain" class="book-explain-text"></div>
+      <button id="book-close" class="btn btn-secondary book-close-btn" aria-label="Close">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Shuffle overlay -->
+<div id="shuffle-overlay" class="hidden" aria-hidden="true">
+  <div class="shuffle-content">
+    <div class="shuffle-cards">
+      <div class="sc sc1"></div>
+      <div class="sc sc2"></div>
+      <div class="sc sc3"></div>
+    </div>
+    <div class="shuffle-text">Shuffling the shoe…</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCRIPTS  (load order matters — no module system)
+══════════════════════════════════════════════════════════ -->
+<script src="scripts/deck.js"></script>
+<script src="scripts/strategy.js"></script>
+<script src="scripts/counter.js"></script>
+<script src="scripts/game.js"></script>
+<script src="scripts/ui.js"></script>
+
+<script>
+  // Bootstrap
+  (function () {
+    const ui   = new UI();
+    const game = new Game(ui);
+    ui.game = game;
+    ui.initDisplay();
+  })();
+</script>
+
+</body>
+</html>
