@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atmos — Weather</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg"></div>
+
+  <div class="app" id="app">
+
+    <!-- ── Hero / Search ── -->
+    <header class="header" id="header">
+      <div class="header-inner">
+        <div class="wordmark" id="wordmark">
+          <span class="wordmark-icon">◎</span>
+          <span>Atmos</span>
+        </div>
+
+        <div class="search-wrap" id="searchWrap">
+          <div class="search-box">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input
+              type="text"
+              id="searchInput"
+              class="search-input"
+              placeholder="Search for a city…"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Search for a city"
+              aria-autocomplete="list"
+              aria-controls="searchDropdown"
+              aria-expanded="false"
+            />
+            <button class="search-clear" id="searchClear" aria-label="Clear search" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <ul
+            class="search-dropdown"
+            id="searchDropdown"
+            role="listbox"
+            aria-label="City suggestions"
+            hidden
+          ></ul>
+        </div>
+
+      </div>
+
+      <!-- Recent searches -->
+      <div class="recent-wrap" id="recentWrap" hidden>
+        <span class="recent-label">Recent</span>
+        <div class="recent-chips" id="recentChips"></div>
+      </div>
+    </header>
+
+    <!-- ── Loading ── -->
+    <div class="loading-state" id="loadingState" hidden>
+      <div class="spinner"></div>
+      <p>Fetching weather data…</p>
+    </div>
+
+    <!-- ── Error ── -->
+    <div class="error-state" id="errorState" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r="0.5" fill="currentColor" stroke="none"/>
+      </svg>
+      <p id="errorMsg">Something went wrong.</p>
+      <button class="btn-retry" id="retryBtn">Retry</button>
+    </div>
+
+    <!-- ── Main content ── -->
+    <main class="main" id="main" hidden>
+
+      <!-- Current weather -->
+      <section class="current-card" id="currentCard" aria-label="Current weather">
+        <div class="current-left">
+          <div class="city-meta">
+            <h1 class="city-name" id="cityName">—</h1>
+            <p class="city-sub" id="citySub">—</p>
+          </div>
+          <div class="condition-block">
+            <img class="condition-icon" id="conditionIcon" src="" alt="" width="80" height="80" />
+            <p class="condition-desc" id="conditionDesc">—</p>
+          </div>
+          <div class="datetime-block">
+            <div class="time-row">
+              <p class="local-time" id="localTime">—</p>
+              <div class="inline-unit-group">
+                <button class="unit-btn" data-group="clock" data-unit="24" aria-pressed="true">24h</button>
+                <button class="unit-btn" data-group="clock" data-unit="12" aria-pressed="false">12h</button>
+              </div>
+            </div>
+            <p class="local-date" id="localDate">—</p>
+          </div>
+        </div>
+
+        <div class="current-right">
+          <div class="temp-display">
+            <span class="temp-value" id="tempValue">—</span>
+            <div class="temp-unit-col">
+              <span class="temp-unit" id="tempUnit">°C</span>
+              <div class="inline-unit-group">
+                <button class="unit-btn" data-group="temp" data-unit="C" aria-pressed="true">°C</button>
+                <button class="unit-btn" data-group="temp" data-unit="F" aria-pressed="false">°F</button>
+              </div>
+            </div>
+          </div>
+          <p class="feels-like">Feels like <span id="feelsLike">—</span></p>
+
+          <div class="stats-grid">
+            <div class="stat">
+              <span class="stat-label">Humidity</span>
+              <span class="stat-value" id="humidity">—</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Wind</span>
+              <span class="stat-value" id="wind">—</span>
+              <div class="inline-unit-group">
+                <button class="unit-btn" data-group="wind" data-unit="ms" aria-pressed="true">m/s</button>
+                <button class="unit-btn" data-group="wind" data-unit="mph" aria-pressed="false">mph</button>
+                <button class="unit-btn" data-group="wind" data-unit="kts" aria-pressed="false">kts</button>
+              </div>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Visibility</span>
+              <span class="stat-value" id="visibility">—</span>
+              <div class="inline-unit-group">
+                <button class="unit-btn" data-group="vis" data-unit="km" aria-pressed="true">km</button>
+                <button class="unit-btn" data-group="vis" data-unit="mi" aria-pressed="false">mi</button>
+              </div>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Pressure</span>
+              <span class="stat-value" id="pressure">—</span>
+            </div>
+            <div class="stat stat-sunrise">
+              <span class="stat-label">Sunrise</span>
+              <span class="stat-value amber" id="sunrise">—</span>
+            </div>
+            <div class="stat stat-sunset">
+              <span class="stat-label">Sunset</span>
+              <span class="stat-value amber" id="sunset">—</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5-day forecast -->
+      <section class="forecast-section" aria-label="5-day forecast">
+        <h2 class="section-title">5-Day Forecast</h2>
+        <div class="forecast-strip" id="forecastStrip"></div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

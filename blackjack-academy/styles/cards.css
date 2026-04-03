@@ -1,0 +1,270 @@
+/* ═══════════════════════════════════════════════════════════
+   BLACKJACK ACADEMY  —  Card Styles
+   Medieval parchment aesthetic with gothic ornamental borders
+═══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════
+   CARD CONTAINER
+══════════════════════════════════════════ */
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  cursor: default;
+  user-select: none;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.card-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  border-radius: var(--card-r);
+}
+
+/* Faces (shared) */
+.card-front,
+.card-back {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--card-r);
+}
+
+/* ── Face visibility ──
+   Default: show front, hide back.
+   Face-down: show back, hide front.
+   Using display (not backface-visibility) for cross-browser reliability. */
+.card-back              { display: none; }
+.card-face-down .card-front { display: none; }
+.card-face-down .card-back  { display: flex; }
+
+/* ══════════════════════════════════════════
+   CARD FRONT
+══════════════════════════════════════════ */
+.card-front {
+  /* Parchment background */
+  background:
+    radial-gradient(ellipse at 30% 25%, #fdf5e6 0%, transparent 60%),
+    linear-gradient(145deg, #f7edd5 0%, #ede0c0 35%, #f5e8d0 65%, #f0dbb8 100%);
+
+  /* Outer border + double inner border (golden frame) */
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.3),
+    inset 0 0 0 2px rgba(212,175,55,0.6),
+    inset 0 0 0 4px rgba(212,175,55,0.15),
+    2px 4px 12px rgba(0,0,0,0.5);
+
+  border: 1.5px solid rgba(100,70,20,0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 4px;
+  overflow: hidden;
+}
+
+/* Subtle aged corner darkening */
+.card-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 0%   0%,   rgba(0,0,0,0.12) 0%, transparent 35%),
+    radial-gradient(circle at 100% 0%,   rgba(0,0,0,0.12) 0%, transparent 35%),
+    radial-gradient(circle at 0%   100%, rgba(0,0,0,0.12) 0%, transparent 35%),
+    radial-gradient(circle at 100% 100%, rgba(0,0,0,0.12) 0%, transparent 35%);
+  border-radius: var(--card-r);
+  pointer-events: none;
+}
+
+/* Thin ornamental inner frame line */
+.card-front::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(160,128,32,0.3);
+  border-radius: calc(var(--card-r) - 4px);
+  pointer-events: none;
+}
+
+/* Red vs Black coloring */
+.card-red  .c-rank,
+.card-red  .c-suit,
+.card-red  .pip,
+.card-red  .face-art { color: #8b1a2a; }
+
+.card-black .c-rank,
+.card-black .c-suit,
+.card-black .pip,
+.card-black .face-art { color: #1a1a3e; }
+
+/* ── Corners ── */
+.card-corner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  z-index: 1;
+}
+.card-tl { align-self: flex-start; }
+.card-br {
+  align-self: flex-end;
+  transform: rotate(180deg);
+}
+.c-rank {
+  font-family: 'Cinzel', serif;
+  font-size: calc(var(--card-w) * 0.19);
+  font-weight: 700;
+  line-height: 1;
+}
+.c-suit {
+  font-size: calc(var(--card-w) * 0.16);
+  line-height: 1.1;
+}
+
+/* ── Center Art ── */
+.card-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  z-index: 1;
+}
+
+/* Face card art (K/Q/J/A) */
+.face-art {
+  font-size: calc(var(--card-w) * 0.28);
+  line-height: 1.1;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+.face-letter {
+  font-family: 'Cinzel Decorative', serif;
+  font-size: calc(var(--card-w) * 0.22);
+  font-weight: 700;
+  line-height: 1;
+  display: block;
+}
+
+/* ── Pip layouts ── */
+.pip { font-size: calc(var(--card-w) * 0.16); line-height: 1; }
+
+.pips {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  gap: 1px;
+  align-items: center;
+  justify-items: center;
+  padding: 2px;
+}
+
+/* Pip grids by count */
+.pips-2  { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+.pips-3  { grid-template-columns: 1fr; grid-template-rows: repeat(3,1fr); }
+.pips-4  { grid-template-columns: 1fr 1fr; }
+.pips-5  { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3,1fr); }
+.pips-6  { grid-template-columns: 1fr 1fr; }
+.pips-7  { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: repeat(3,1fr); }
+.pips-8  { grid-template-columns: 1fr 1fr; }
+.pips-9  { grid-template-columns: 1fr 1fr 1fr; }
+.pips-10 { grid-template-columns: 1fr 1fr; }
+
+/* Bottom row pip (5/7 center-bottom) */
+.pips-5  .pip:last-child { grid-column: 1 / -1; }
+.pips-7  .pip:nth-child(7) { grid-column: 2; }
+
+/* ══════════════════════════════════════════
+   CARD BACK  (ornate medieval pattern)
+══════════════════════════════════════════ */
+.card-back {
+  background: linear-gradient(145deg, #1a1040 0%, #0d0a28 100%);
+  border: 1.5px solid rgba(212,175,55,0.6);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.5),
+    inset 0 0 0 3px rgba(212,175,55,0.2),
+    2px 4px 12px rgba(0,0,0,0.6);
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  /* display is controlled by .card-back { display:none } and
+     .card-face-down .card-back { display:flex } rules above */
+}
+
+.card-back-pattern {
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(212,175,55,0.3);
+  border-radius: calc(var(--card-r) - 3px);
+  background:
+    /* Diamond lattice */
+    repeating-linear-gradient(
+      45deg,
+      rgba(212,175,55,0.06) 0px,
+      rgba(212,175,55,0.06) 1px,
+      transparent 1px,
+      transparent 10px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(212,175,55,0.06) 0px,
+      rgba(212,175,55,0.06) 1px,
+      transparent 1px,
+      transparent 10px
+    ),
+    /* Base */
+    linear-gradient(160deg, #16103a 0%, #0a0820 100%);
+}
+
+.card-back::before {
+  content: '✦';
+  color: rgba(212,175,55,0.35);
+  font-size: calc(var(--card-w) * 0.45);
+  z-index: 1;
+  text-shadow: 0 0 12px rgba(212,175,55,0.3);
+}
+
+.card-back::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 2px solid rgba(212,175,55,0.2);
+  border-radius: calc(var(--card-r) - 6px);
+}
+
+/* ══════════════════════════════════════════
+   CARD STATES
+══════════════════════════════════════════ */
+
+/* Dealing animation (applied by JS, then removed) */
+.card.dealing {
+  z-index: 10;
+}
+
+/* Hover lift when in player hand during turn */
+.hand-active .card:hover {
+  transform: translateY(-4px);
+  z-index: 5;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+
+/* Busted card dims */
+.hand-container.hand-lose-dim .card .card-front {
+  filter: brightness(0.7) saturate(0.5);
+}
+
+/* ══════════════════════════════════════════
+   CARD ROW  (for dealer hand)
+══════════════════════════════════════════ */
+.card-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--card-h);
+  align-items: flex-start;
+}

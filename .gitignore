@@ -13,6 +13,8 @@ dist-ssr
 *.local
 .env
 .env.*
+# neo-sentinel/ is the build output — committed intentionally
+!neo-sentinel/
 
 # Editor directories and files
 .vscode/*

@@ -4,6 +4,14 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  base: '/neo-sentinel/',
+  build: {
+    outDir: 'neo-sentinel',
+    emptyOutDir: true,
+    rollupOptions: {
+      input: 'app.html',
+    },
+  },
   server: {
     proxy: {
       '/api/cad': {
