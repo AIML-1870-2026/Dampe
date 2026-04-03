@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: '/neo-sentinel/',
+  base: '/Dampe/neo-sentinel/',
   build: {
     outDir: 'neo-sentinel',
     emptyOutDir: true,
