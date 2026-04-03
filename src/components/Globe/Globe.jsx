@@ -91,18 +91,20 @@ export default function Globe({ objects, selectedObject, onSelectObject }) {
     scene.add(earth);
 
     // Load textures — assign as they arrive so Earth is never just a placeholder
-    loader.load('/textures/earth_daymap.jpg', (tex) => {
+    // import.meta.env.BASE_URL resolves to /Dampe/neo-sentinel/ on GitHub Pages
+    const base = import.meta.env.BASE_URL;
+    loader.load(`${base}textures/earth_daymap.jpg`, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       earthMat.map = tex;
       earthMat.needsUpdate = true;
     });
-    loader.load('/textures/earth_specular.jpg', (tex) => {
+    loader.load(`${base}textures/earth_specular.jpg`, (tex) => {
       earthMat.specularMap = tex;
       earthMat.specular = new THREE.Color(0x888888);
       earthMat.shininess = 25;
       earthMat.needsUpdate = true;
     });
-    loader.load('/textures/earth_normal.jpg', (tex) => {
+    loader.load(`${base}textures/earth_normal.jpg`, (tex) => {
       earthMat.normalMap = tex;
       earthMat.normalScale = new THREE.Vector2(0.6, 0.6);
       earthMat.needsUpdate = true;
