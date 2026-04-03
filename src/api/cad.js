@@ -1,12 +1,14 @@
 const CACHE_KEY = 'neo_cad_cache';
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000;
+
+const NASA_CAD = 'https://ssd-api.jpl.nasa.gov/cad.api';
+// corsproxy.io forwards requests with CORS headers — used for static GitHub Pages hosting
+const CORS_PROXY = 'https://corsproxy.io/?url=';
 
 export async function fetchCAD() {
   const cached = getCache(CACHE_KEY);
   if (cached) return cached;
 
-  // Route through /api/cad proxy (Vite dev proxy or Vercel serverless fn)
-  // This avoids CORS — ssd-api.jpl.nasa.gov does not send Access-Control-Allow-Origin
   const params = new URLSearchParams({
     'dist-max': '0.05',
     'date-min': 'now',
@@ -16,7 +18,12 @@ export async function fetchCAD() {
     fullname: 'true',
   });
 
-  const url = `/api/cad?${params}`;
+  // In dev the Vite proxy handles /api/cad; in production (static GitHub Pages)
+  // we go directly through the CORS proxy.
+  const url = import.meta.env.DEV
+    ? `/api/cad?${params}`
+    : `${CORS_PROXY}${encodeURIComponent(`${NASA_CAD}?${params}`)}`;
+
   const res = await fetch(url);
   if (!res.ok) throw new Error(`CAD API error: ${res.status}`);
 
@@ -31,7 +38,6 @@ function parseCAD(json) {
   return (json.data || []).map((row) => {
     const obj = {};
     fields.forEach((f, i) => (obj[f] = row[i]));
-    // Strip parentheses from fullname: "       (2013 GM3)" → "2013 GM3"
     const rawName = obj.fullname?.trim().replace(/^\(|\)$/g, '').trim() || null;
     const des = obj.des?.trim();
     const name = rawName && rawName !== des ? rawName : null;
