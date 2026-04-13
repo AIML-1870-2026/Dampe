@@ -1,36 +1,52 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AIML 1870 Portfolio</title>
-    <style>
-      body { font-family: system-ui, sans-serif; max-width: 600px; margin: 4rem auto; padding: 0 1rem; }
-      h1 { font-size: 1.5rem; margin-bottom: 1.5rem; }
-      ul { list-style: none; padding: 0; }
-      li { margin: 0.5rem 0; }
-      a { color: #2563eb; text-decoration: none; }
-      a:hover { text-decoration: underline; }
-    </style>
-  </head>
-  <body>
-    <h1>AIML 1870 Portfolio — Dampe</h1>
-    <ul>
-      <li><a href="neo-sentinel/">NEO Sentinel — Near-Earth Object Monitor</a></li>
-      <li><a href="readable/">Readable — WCAG Color Contrast Checker</a></li>
-      <li><a href="rgb-color-lab/">RGB Color Lab</a></li>
-      <li><a href="AIML/">AIML</a></li>
-      <li><a href="Assignment-01/">Assignment 01</a></li>
-      <li><a href="Next-Gen-Coding/">Next-Gen Coding</a></li>
-      <li><a href="Snake-Game/">Snake Game</a></li>
-      <li><a href="Stellar-Web/">Stellar Web</a></li>
-      <li><a href="decision-neuron/">Decision Neuron</a></li>
-      <li><a href="julia-set-explorer/">Julia Set Explorer</a></li>
-      <li><a href="turing-patterns/">Turing Patterns</a></li>
-      <li><a href="medieval-runner/">Medieval Kingdom Runner</a></li>
-      <li><a href="fda-drug-compare/">FDA Drug Comparison Tool</a></li>
-      <li><a href="llm-switchboard/">LLM Switchboard</a></li>
-      <li><a href="amazon-review-generator/">Amazon Review Generator</a></li>
-    </ul>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medieval Kingdom Runner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="canvas" width="800" height="450"></canvas>
+
+    <div id="ui">
+
+      <!-- ===== MAIN MENU ===== -->
+      <div id="menu-screen" class="screen">
+        <div class="menu-inner">
+          <h1 class="title-line1">Medieval</h1>
+          <h1 class="title-line2">Kingdom</h1>
+          <h1 class="title-line3">Runner</h1>
+          <div class="menu-best">BEST: <span id="menu-best">0</span></div>
+          <button id="start-btn" class="px-btn">▶  START GAME</button>
+          <div class="controls-hint">
+            <p>SPACE / ↑ / CLICK — Jump</p>
+            <p>Hold longer for higher jump</p>
+            <p>R — Restart after death</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== GAME OVER ===== -->
+      <div id="gameover-screen" class="screen hidden">
+        <div class="gameover-inner">
+          <h2 class="gameover-title">GAME OVER</h2>
+          <div class="score-row">SCORE <span id="go-score">0</span></div>
+          <div class="score-row">BEST  <span id="go-best">0</span></div>
+          <div id="new-record" class="new-record hidden">✦ NEW HIGH SCORE ✦</div>
+          <div class="gameover-btns">
+            <button id="restart-btn" class="px-btn">▶  PLAY AGAIN</button>
+            <button id="menu-btn"    class="px-btn secondary">MAIN MENU</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- #ui -->
+  </div>
+
+  <script src="game.js"></script>
+</body>
 </html>
