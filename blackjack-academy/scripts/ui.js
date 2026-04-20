@@ -14,7 +14,10 @@ class UI {
     this.$ = id => document.getElementById(id);
 
     this._insuranceResolve = null;
-    this._bookVisible = false;
+    this._bookVisible      = false;
+    this._agentPanelOpen   = false;
+    this._llmProvider      = new LLMProvider();
+    this._agent            = new Agent();
 
     this._initDOM();
     this._bindEvents();
@@ -93,6 +96,35 @@ class UI {
 
       // Shuffle overlay
       shuffleOverlay: $('shuffle-overlay'),
+
+      // Agent panel
+      btnToggleAgent:     $('btn-toggle-agent'),
+      agentPanel:         $('agent-panel'),
+      agentPanelInner:    $('agent-panel-inner'),
+      agentStatusPill:    $('agent-status-pill'),
+      agentStatusText:    $('agent-status-text'),
+      agentStrategySelect:$('agent-strategy-select'),
+      agentStrategyDesc:  $('agent-strategy-desc'),
+      agentBetUnit:       $('agent-bet-unit'),
+      agentApiKey:        $('agent-api-key'),
+      btnLoadKey:         $('btn-load-key'),
+      agentEnvFile:       $('agent-env-file'),
+      agentProviderBadge: $('agent-provider-badge'),
+      agentProviderIcon:  $('agent-provider-icon'),
+      agentProviderName:  $('agent-provider-name'),
+      btnAgentStart:      $('btn-agent-start'),
+      btnAgentStop:       $('btn-agent-stop'),
+      agentRationale:     $('agent-rationale'),
+      agentThinkingBar:   $('agent-thinking-bar'),
+      agentThinkingText:  $('agent-thinking-text'),
+      agentLog:           $('agent-log'),
+      btnClearAgentLog:   $('btn-clear-agent-log'),
+      agentReasoning:     $('agent-reasoning'),
+      // Tab panes + buttons
+      agentTabBtns:       document.querySelectorAll('.agent-tab-btn'),
+      agentPaneStrategy:  $('agent-pane-strategy'),
+      agentPaneApikey:    $('agent-pane-apikey'),
+      btnStartAIFromKey:  $('btn-start-ai-from-key'),
     };
   }
 
@@ -148,9 +180,10 @@ class UI {
       if (this.game?.gamePhase === 'betting') this.game?.forceNewShoe();
     });
 
-    // Keyboard shortcuts
+    // Keyboard shortcuts (disabled when agent is playing)
     document.addEventListener('keydown', e => {
       if (e.repeat) return;
+      if (this._agent.isRunning) return; // agent has control
       const phase = this.game?.gamePhase;
       switch (e.key.toLowerCase()) {
         case 'h': if (phase === 'playerTurn') this.game?.handleAction('hit'); break;
@@ -169,6 +202,49 @@ class UI {
     // Close book on overlay click
     dom.bookPanel.addEventListener('click', e => {
       if (e.target === dom.bookPanel) this.hideBook();
+    });
+
+    // ── Agent panel ──────────────────────────────────────────────
+    dom.btnToggleAgent.addEventListener('click', () => this._toggleAgentPanel());
+
+    // Tab switching
+    dom.agentTabBtns.forEach(btn => {
+      btn.addEventListener('click', () => this._switchAgentTab(btn.dataset.tab));
+    });
+
+    // Strategy selector — auto-switch to API Key tab when LLM chosen
+    dom.agentStrategySelect.addEventListener('change', () => this._onStrategyChange());
+
+    // API key load button
+    dom.btnLoadKey.addEventListener('click', () => this._loadApiKey());
+
+    // .env file import
+    dom.agentEnvFile.addEventListener('change', e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const key = this._parseEnvFile(ev.target.result || '');
+        if (key) {
+          dom.agentApiKey.value = key;
+          this._loadApiKey();
+        } else {
+          this.flashMessage('No API key found in .env file', 'warn');
+        }
+        e.target.value = '';
+      };
+      reader.readAsText(file);
+    });
+
+    // Start / Stop
+    dom.btnAgentStart.addEventListener('click',      () => this._startAgent());
+    dom.btnAgentStop.addEventListener('click',       () => this._stopAgent());
+    dom.btnStartAIFromKey.addEventListener('click',  () => this._startAgent());
+
+    // Clear log
+    dom.btnClearAgentLog.addEventListener('click', () => {
+      this._agent.clearLog();
+      this.updateAgentLog([]);
     });
   }
 
@@ -591,6 +667,220 @@ class UI {
   ══════════════════════════════════════════ */
   _nextFrame() { return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); }
   _wait(ms)    { return new Promise(r => setTimeout(r, ms * (this.game?.speedMultiplier ?? 1))); }
+
+  /* ══════════════════════════════════════════
+     Agent Panel
+  ══════════════════════════════════════════ */
+
+  _toggleAgentPanel() {
+    const { dom } = this;
+    this._agentPanelOpen = !this._agentPanelOpen;
+    dom.agentPanel.classList.toggle('hidden', !this._agentPanelOpen);
+    dom.btnToggleAgent.classList.toggle('active', this._agentPanelOpen);
+  }
+
+  _switchAgentTab(tabName) {
+    const { dom } = this;
+    dom.agentTabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tabName));
+    dom.agentPaneStrategy.classList.toggle('hidden', tabName !== 'strategy');
+    dom.agentPaneApikey.classList.toggle('hidden',   tabName !== 'apikey');
+  }
+
+  _onStrategyChange() {
+    const { dom } = this;
+    const val = dom.agentStrategySelect.value;
+    const descs = {
+      basic:     'Plays perfect basic strategy every hand. Flat bet.',
+      counting:  'Hi-Lo true count bet spreading (1×–16×) on top of basic strategy.',
+      martingale:'Doubles the bet after every loss; resets to base after a win.',
+      paroli:    'Doubles bet after each win (max 3 wins), then resets to base.',
+      dalembert: 'Increases bet by 1 unit after a loss; decreases by 1 after a win.',
+      '1326':    'Positive progression: bet 1×, 3×, 2×, 6× units on consecutive wins.',
+      llm:       'LLM API makes every action decision. Set up your key on the API Key tab.',
+    };
+    dom.agentStrategyDesc.textContent = descs[val] ?? '';
+    // Auto-navigate to API Key tab when LLM is selected
+    if (val === 'llm') this._switchAgentTab('apikey');
+  }
+
+  _loadApiKey() {
+    const { dom } = this;
+    const raw = dom.agentApiKey.value;
+    const ok  = this._llmProvider.setKey(raw);
+    if (!ok) {
+      this.flashMessage('Unrecognised key format — must start with sk-ant-, sk-, or AIza', 'warn');
+      dom.agentProviderBadge.classList.add('hidden');
+      dom.btnStartAIFromKey.classList.add('hidden');
+      return;
+    }
+    dom.agentProviderIcon.textContent = this._llmProvider.providerIcon;
+    dom.agentProviderName.textContent = `${this._llmProvider.providerLabel} · ${this._llmProvider.modelName}`;
+    dom.agentProviderBadge.classList.remove('hidden');
+
+    // Ensure LLM strategy is selected so _startAgent() picks it up
+    dom.agentStrategySelect.value = 'llm';
+
+    // Show the Start AI Agent shortcut button on this tab
+    dom.btnStartAIFromKey.classList.remove('hidden');
+
+    this.flashMessage(`${this._llmProvider.providerLabel} key loaded — click "Start AI Agent" to play!`, 'info');
+    // Mask the input
+    dom.agentApiKey.value = '●'.repeat(12) + raw.slice(-4);
+  }
+
+  _parseEnvFile(content) {
+    const patterns = [
+      /ANTHROPIC_API_KEY\s*=\s*['"]?([^\s'"#]+)/i,
+      /OPENAI_API_KEY\s*=\s*['"]?([^\s'"#]+)/i,
+      /API_KEY\s*=\s*['"]?([^\s'"#]+)/i,
+    ];
+    for (const re of patterns) {
+      const m = content.match(re);
+      if (m?.[1]) return m[1].trim();
+    }
+    return null;
+  }
+
+  _buildStrategy() {
+    const { dom } = this;
+    const val     = dom.agentStrategySelect.value;
+    const unit    = Math.max(10, Math.min(+dom.agentBetUnit.value || 25, 500));
+
+    let strategy;
+    switch (val) {
+      case 'basic':     strategy = new BookStrategy();         break;
+      case 'counting':  strategy = new CardCountingStrategy(); break;
+      case 'martingale':strategy = new MartingaleStrategy();   break;
+      case 'paroli':    strategy = new ParoliStrategy();       break;
+      case 'dalembert': strategy = new DAlembert();            break;
+      case '1326':      strategy = new OneTwoThreeSix();       break;
+      case 'llm':       strategy = new LLMStrategy(this._llmProvider); break;
+      default:          strategy = new BookStrategy();
+    }
+    strategy.setUnitBet(unit);
+    return strategy;
+  }
+
+  _startAgent() {
+    const { dom } = this;
+
+    if (this.game?.gamePhase !== 'betting') {
+      this.flashMessage('Finish the current round first', 'warn');
+      return;
+    }
+
+    const val = dom.agentStrategySelect.value;
+    if (val === 'llm' && !this._llmProvider.isConfigured()) {
+      this.flashMessage('Load an API key on the API Key tab first', 'warn');
+      this._switchAgentTab('apikey');
+      return;
+    }
+
+    const strategy = this._buildStrategy();
+    this._agent.setStrategy(strategy);
+    this._agent.start();
+    this.game.setAgent(this._agent);
+
+    // Switch to Strategy tab so the Stop button and log are visible
+    this._switchAgentTab('strategy');
+
+    dom.btnAgentStart.classList.add('hidden');
+    dom.btnAgentStop.classList.remove('hidden');
+    dom.agentPanelInner.classList.add('agent-running');
+    dom.agentStatusPill.classList.add('running');
+    dom.agentStatusText.textContent = 'Running';
+    dom.agentStrategySelect.disabled = true;
+    dom.agentBetUnit.disabled = true;
+    document.getElementById('game-wrapper').classList.add('agent-active');
+
+    const bet = this._agent.getBet(this.game.bankroll, this.game.counter, this.game.deck);
+    this.game.currentBet = Math.max(10, Math.min(bet, this.game.bankroll, 500));
+    this.updateBetDisplay(this.game.currentBet, this.game.bankroll);
+    this.updateAgentRationale(this._agent.getBetRationale());
+    this.showTableMessage(`⚗ ${strategy.name} — Bet: $${this.game.currentBet}`);
+    this.game.startRound();
+  }
+
+  _stopAgent() {
+    const { dom } = this;
+    this._agent.stop();
+    this.game?.clearAgent();
+
+    dom.btnAgentStop.classList.add('hidden');
+    dom.btnAgentStart.classList.remove('hidden');
+    dom.btnStartAIFromKey.classList.add('hidden');
+    dom.agentPanelInner.classList.remove('agent-running');
+    dom.agentStatusPill.classList.remove('running');
+    dom.agentStatusText.textContent = 'Dormant';
+    dom.agentStrategySelect.disabled = false;
+    dom.agentBetUnit.disabled = false;
+    document.getElementById('game-wrapper').classList.remove('agent-active');
+    dom.agentThinkingBar.style.display = 'none';
+
+    this.flashMessage('Agent stopped — you have control', 'info');
+  }
+
+  /* ── Called by game.js during agent play ── */
+
+  showAgentThinking(text) {
+    const { dom } = this;
+    dom.agentThinkingText.textContent = text || 'Contemplating…';
+    dom.agentThinkingBar.style.display = 'flex';
+  }
+
+  showAgentDecision(action, rationale) {
+    const { dom } = this;
+
+    // Brief highlight on the corresponding button
+    const btnMap = { hit: dom.btnHit, stand: dom.btnStand, double: dom.btnDouble, split: dom.btnSplit };
+    const btn = btnMap[action];
+    if (btn && !btn.disabled) {
+      btn.classList.add('agent-highlight');
+      btn.addEventListener('animationend', () => btn.classList.remove('agent-highlight'), { once: true });
+    }
+
+    // Show reasoning
+    if (rationale) {
+      dom.agentReasoning.textContent = rationale;
+      dom.agentReasoning.classList.add('fresh');
+      setTimeout(() => dom.agentReasoning.classList.remove('fresh'), 2000);
+    }
+
+    dom.agentThinkingBar.style.display = 'none';
+  }
+
+  updateAgentLog(entries) {
+    const { dom } = this;
+    if (!entries.length) {
+      dom.agentLog.innerHTML = '<div class="agent-log-empty">No activity yet…</div>';
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    for (const entry of entries) {
+      const el  = document.createElement('div');
+      el.className = `log-entry ${entry.type ?? ''}`;
+
+      const sym  = document.createElement('span');
+      sym.className = 'log-sym';
+      sym.textContent = { 'round-win':'✓', 'round-blackjack':'★', 'round-push':'≈', 'round-lose':'✗', action:'→' }[entry.type] ?? '·';
+
+      const txt  = document.createElement('span');
+      txt.className = 'log-text';
+      txt.textContent = entry.text;
+
+      el.appendChild(sym);
+      el.appendChild(txt);
+      fragment.appendChild(el);
+    }
+    dom.agentLog.innerHTML = '';
+    dom.agentLog.appendChild(fragment);
+    dom.agentLog.scrollTop = 0;
+  }
+
+  updateAgentRationale(text) {
+    if (this.dom.agentRationale) this.dom.agentRationale.textContent = text;
+  }
 
   /* ══════════════════════════════════════════
      Init Display

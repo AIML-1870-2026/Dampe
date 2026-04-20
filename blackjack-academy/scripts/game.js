@@ -108,7 +108,13 @@ class Game {
 
     // The resolve function for the current player-action promise
     this._actionResolve = null;
+
+    // AI agent (null when human is playing)
+    this.agent = null;
   }
+
+  setAgent(agent) { this.agent = agent; }
+  clearAgent()    { this.agent = null; }
 
   delay(ms) {
     return new Promise(r => setTimeout(r, Math.round(ms * this.speedMultiplier)));
@@ -188,7 +194,10 @@ class Game {
     if (dealerUp.rank === 'A') {
       const cost = Math.floor(this.currentBet / 2);
       if (cost > 0 && cost <= this.bankroll) {
-        const taken = await this.ui.offerInsurance(cost);
+        // Agent never takes insurance (basic strategy: always decline)
+        const taken = this.agent?.isRunning
+          ? this.agent.shouldTakeInsurance()
+          : await this.ui.offerInsurance(cost);
         if (taken) {
           this.bankroll -= cost;
           this.playerHands[0].insuranceBet = cost;
@@ -270,8 +279,75 @@ class Game {
 
   /** Drives a single hand until the player is done */
   async _playHand(hand, idx) {
+    if (this.agent?.isRunning) {
+      await this._agentPlayHand(hand, idx);
+      return;
+    }
     while (!hand.isDone) {
       await this._awaitAction(hand, idx);
+    }
+    this.ui.hideActionButtons();
+  }
+
+  /** Agent-driven hand loop — bypasses the promise/resolve mechanism */
+  async _agentPlayHand(hand, idx) {
+    while (!hand.isDone) {
+      this.ui.showActionButtons(hand, idx);
+
+      // Thinking delay — makes play feel natural
+      const thinkMs = 450 + Math.random() * 550;
+      await this.delay(thinkMs);
+
+      if (!this.agent?.isRunning) break;
+
+      this.ui.showAgentThinking('Consulting the oracle…');
+      let action = await this.agent.getAction(
+        hand, this.dealerHand.cards[0],
+        hand.canSplit, hand.canDouble,
+        this.counter, this.deck, this.bankroll
+      );
+
+      // Validate: map impossible actions to fallbacks
+      if (action === 'hit'    && !hand.canHit)                               action = 'stand';
+      if (action === 'double' && (!hand.canDouble || this.bankroll < hand.bet)) action = hand.canHit ? 'hit' : 'stand';
+      if (action === 'split'  && (!hand.canSplit  || this.bankroll < hand.bet)) action = hand.canHit ? 'hit' : 'stand';
+
+      const rationale = this.agent.getActionRationale(
+        hand, this.dealerHand.cards[0], hand.canSplit, hand.canDouble, this.bankroll
+      );
+
+      this.ui.showAgentDecision(action, rationale);
+      this.agent.addActionLog(`→ ${action.toUpperCase()} on ${hand.displayValue} vs ${this.dealerHand.cards[0].rank}`);
+
+      await this.delay(220);
+
+      if (action === 'hit') {
+        if (!hand.canHit) { hand.isStood = true; break; }
+        await this._dealTo(hand, true);
+        this.ui.updatePlayerHandValue(hand, idx);
+        // Loop continues if hand not done
+
+      } else if (action === 'stand') {
+        hand.isStood = true;
+        this.ui.hideActionButtons();
+        break;
+
+      } else if (action === 'double') {
+        const extra  = Math.min(hand.bet, this.bankroll);
+        this.bankroll -= extra;
+        hand.bet += extra;
+        hand.isDoubled = true;
+        this.ui.updateBetDisplay(this.currentBet, this.bankroll);
+        await this._dealTo(hand, true);
+        this.ui.updatePlayerHandValue(hand, idx);
+        this.ui.hideActionButtons();
+        break;
+
+      } else if (action === 'split') {
+        await this._doSplit(hand, idx);
+        this.ui.highlightHand(idx, this.playerHands.length);
+        // _doSplit dealt one card to each; continue loop for current hand
+      }
     }
     this.ui.hideActionButtons();
   }
@@ -456,6 +532,13 @@ class Game {
   }
 
   async _finishRound() {
+    // Notify agent of round results before state is cleared
+    if (this.agent?.isRunning) {
+      const outcomes = this.playerHands.map(h => h.outcome);
+      this.agent.onRoundEnd(outcomes, this.playerHands, this.dealerHand);
+      this.ui.updateAgentLog(this.agent.getLog());
+    }
+
     await this.delay(2000);
     this.gamePhase = 'betting';
     this.currentBet = 0;
@@ -466,7 +549,19 @@ class Game {
       this._saveBankroll();
     }
 
-    // Auto-rebet: carry the last bet forward so the player can just hit Deal
+    // Agent auto-continue — setTimeout breaks the async recursion chain
+    if (this.agent?.isRunning) {
+      const bet = this.agent.getBet(this.bankroll, this.counter, this.deck);
+      this.currentBet = Math.max(10, Math.min(bet, this.bankroll, 500));
+      this.ui.updateBetDisplay(this.currentBet, this.bankroll);
+      this.ui.updateAgentRationale(this.agent.getBetRationale());
+      this.ui.showTableMessage(`⚗ ${this.agent.strategy?.name ?? 'Agent'} — Bet: $${this.currentBet}`);
+      await this.delay(350);
+      setTimeout(() => this.startRound(), 0);
+      return;
+    }
+
+    // Human flow: auto-rebet so player can just hit Deal
     if (this.lastBet && this.lastBet <= this.bankroll) {
       this.currentBet = Math.min(this.lastBet, this.bankroll, 500);
     }

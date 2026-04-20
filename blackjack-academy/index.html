@@ -6,13 +6,13 @@
   <title>Blackjack Academy ⚔️</title>
 
   <!-- Medieval fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=cinzel:400,600,700,900|cinzel-decorative:400,700|im-fell-english:400i" rel="stylesheet">
 
   <link rel="stylesheet" href="styles/main.css">
   <link rel="stylesheet" href="styles/cards.css">
   <link rel="stylesheet" href="styles/animations.css">
+  <link rel="stylesheet" href="styles/agent.css">
 </head>
 <body>
 
@@ -167,7 +167,155 @@
           <button id="btn-new-shoe" class="btn-setting" title="Force a new shoe shuffle">
             New Shoe
           </button>
+          <button id="btn-toggle-agent" class="btn-setting" title="Open the AI Arbiter panel">
+            ⚗ AI Arbiter
+          </button>
         </div>
+
+        <!-- ── AI Arbiter Panel ── -->
+        <div id="agent-panel" class="hidden">
+          <div id="agent-panel-inner">
+
+            <!-- Header row -->
+            <div class="agent-panel-header">
+              <span class="agent-header-icon">⚗</span>
+              <span class="agent-header-title">AI Arbiter</span>
+              <div class="agent-status-pill" id="agent-status-pill">
+                <div class="agent-status-dot"></div>
+                <span id="agent-status-text">Dormant</span>
+              </div>
+            </div>
+
+            <!-- Tab navigation -->
+            <div class="agent-tab-nav" role="tablist">
+              <button class="agent-tab-btn active" data-tab="strategy" role="tab">📜 Strategy</button>
+              <button class="agent-tab-btn"         data-tab="apikey"   role="tab">🔑 API Key</button>
+            </div>
+
+            <!-- ── Tab: Strategy ── -->
+            <div class="agent-tab-pane" id="agent-pane-strategy" role="tabpanel">
+              <div class="agent-columns">
+
+                <!-- Config column -->
+                <div class="agent-config">
+                  <div class="agent-field">
+                    <label class="agent-label">Strategy</label>
+                    <select id="agent-strategy-select" class="agent-select">
+                      <option value="basic">📜 Basic Strategy (By the Book)</option>
+                      <option value="counting">⚖ Card Counting (Hi-Lo)</option>
+                      <option value="martingale">⬆ Martingale System</option>
+                      <option value="paroli">🌊 Paroli System</option>
+                      <option value="dalembert">⚖ D'Alembert System</option>
+                      <option value="1326">✦ 1-3-2-6 Progression</option>
+                      <option value="llm">🤖 LLM Agent (requires API key →)</option>
+                    </select>
+                  </div>
+
+                  <div class="agent-field">
+                    <div class="agent-description" id="agent-strategy-desc">
+                      Plays perfect basic strategy every hand. Flat bet.
+                    </div>
+                  </div>
+
+                  <div class="agent-field">
+                    <label class="agent-label">Base Bet (gold)</label>
+                    <div class="agent-bet-row">
+                      <input type="number" id="agent-bet-unit" class="agent-input"
+                        value="25" min="10" max="500" step="5">
+                      <span class="agent-unit">gold / hand</span>
+                    </div>
+                  </div>
+
+                  <div class="agent-controls">
+                    <button id="btn-agent-start" class="agent-btn-start">▶ Start Agent</button>
+                    <button id="btn-agent-stop"  class="agent-btn-stop hidden">■ Stop</button>
+                  </div>
+
+                  <div class="agent-rationale" id="agent-rationale"></div>
+
+                  <div class="agent-thinking-bar" id="agent-thinking-bar" style="display:none">
+                    <span id="agent-thinking-text">Contemplating…</span>
+                    <span class="agent-thinking-dots">
+                      <span>·</span><span>·</span><span>·</span>
+                    </span>
+                  </div>
+                </div><!-- /agent-config -->
+
+                <!-- Log column -->
+                <div class="agent-log-col">
+                  <div class="agent-log-header">
+                    <span>⚡ Agent Log</span>
+                    <button id="btn-clear-agent-log" class="agent-btn-tiny">Clear</button>
+                  </div>
+                  <div id="agent-log" class="agent-log-area">
+                    <div class="agent-log-empty">No activity yet…</div>
+                  </div>
+                  <div class="agent-reasoning" id="agent-reasoning"></div>
+                </div>
+
+              </div><!-- /agent-columns -->
+            </div><!-- /agent-pane-strategy -->
+
+            <!-- ── Tab: API Key ── -->
+            <div class="agent-tab-pane hidden" id="agent-pane-apikey" role="tabpanel">
+              <div class="apikey-tab-body">
+
+                <p class="apikey-intro">
+                  Connect an LLM to decide every blackjack action. Paste your API key below
+                  or import a <code>.env</code> file — the key is never stored outside this page.
+                </p>
+
+                <div class="apikey-form">
+                  <label class="agent-label">API Key</label>
+                  <div class="apikey-input-row">
+                    <input type="password" id="agent-api-key" class="agent-input apikey-input"
+                      placeholder="sk-ant-api03-…  /  sk-proj-…">
+                    <button id="btn-load-key" class="agent-btn-sm">Load Key</button>
+                  </div>
+
+                  <div class="apikey-or-row">
+                    <span class="apikey-or-line"></span>
+                    <span class="apikey-or-text">or</span>
+                    <span class="apikey-or-line"></span>
+                  </div>
+
+                  <label class="agent-file-label apikey-file-label" title="Import a .env file containing your API key">
+                    📁 Import .env / .txt file
+                    <input type="file" id="agent-env-file" accept=".env,.txt" class="hidden">
+                  </label>
+
+                  <div id="agent-provider-badge" class="agent-provider-badge hidden">
+                    <span class="agent-provider-icon" id="agent-provider-icon">⚡</span>
+                    <span id="agent-provider-name">Provider</span>
+                    <span class="agent-key-loaded-tag">Key Loaded ✓</span>
+                  </div>
+
+                  <button id="btn-start-ai-from-key" class="agent-btn-start apikey-start-btn hidden">
+                    ▶ Start AI Agent
+                  </button>
+                </div>
+
+                <div class="apikey-providers">
+                  <div class="apikey-providers-title">Supported Providers</div>
+                  <div class="apikey-provider-list">
+                    <div class="apikey-provider-row">
+                      <span class="apk-icon">⚡</span>
+                      <span class="apk-name">Anthropic</span>
+                      <span class="apk-hint">sk-ant-api03-…</span>
+                    </div>
+                    <div class="apikey-provider-row">
+                      <span class="apk-icon">◎</span>
+                      <span class="apk-name">OpenAI</span>
+                      <span class="apk-hint">sk-proj-… / sk-…</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div><!-- /apikey-tab-body -->
+            </div><!-- /agent-pane-apikey -->
+
+          </div><!-- /agent-panel-inner -->
+        </div><!-- /agent-panel -->
 
       </div><!-- /felt-surface -->
     </div><!-- /table-frame -->
@@ -253,6 +401,8 @@
 <script src="scripts/deck.js"></script>
 <script src="scripts/strategy.js"></script>
 <script src="scripts/counter.js"></script>
+<script src="scripts/llm-api.js"></script>
+<script src="scripts/agent.js"></script>
 <script src="scripts/game.js"></script>
 <script src="scripts/ui.js"></script>
 

@@ -3,8 +3,8 @@
    Medieval theme: dark wood + green felt + gold accents
 ═══════════════════════════════════════════════════════════ */
 
-/* ── Google Fonts ── */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Cinzel+Decorative:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap');
+/* ── Fonts ── */
+@import url('https://fonts.bunny.net/css?family=cinzel:400,600,700,900|cinzel-decorative:400,700|im-fell-english:400i');
 
 /* ── CSS Variables ── */
 :root {
