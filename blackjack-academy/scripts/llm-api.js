@@ -2,12 +2,13 @@
 
 /* ══════════════════════════════════════════════
    LLMProvider  —  API key management & LLM calls
-   Supports Anthropic and OpenAI via direct fetch (no SDK required).
+   Detects provider from key prefix; calls the
+   appropriate chat-completions endpoint.
 ═══════════════════════════════════════════════ */
 class LLMProvider {
   constructor() {
     this.apiKey   = null;
-    this.provider = null; // 'anthropic' | 'openai'
+    this.provider = null; // 'sk-ant' | 'sk'
   }
 
   /* ── Key loading ── */
@@ -30,21 +31,21 @@ class LLMProvider {
   /* ── Provider metadata ── */
 
   _detectProvider(key) {
-    if (key.startsWith('sk-ant-'))  return 'anthropic';
-    if (key.startsWith('sk-'))      return 'openai';
+    if (key.startsWith('sk-ant-'))  return 'sk-ant';
+    if (key.startsWith('sk-'))      return 'sk';
     return 'unknown';
   }
 
   get modelName() {
-    return { anthropic:'Claude Haiku', openai:'GPT-4o Mini' }[this.provider] ?? 'AI';
+    return { 'sk-ant':'Haiku (fast)', 'sk':'Mini (fast)' }[this.provider] ?? 'AI';
   }
 
   get providerLabel() {
-    return { anthropic:'Anthropic', openai:'OpenAI' }[this.provider] ?? 'Unknown';
+    return { 'sk-ant':'sk-ant key', 'sk':'sk key' }[this.provider] ?? 'Unknown';
   }
 
   get providerIcon() {
-    return { anthropic:'⚡', openai:'◎' }[this.provider] ?? '?';
+    return { 'sk-ant':'⚡', 'sk':'◎' }[this.provider] ?? '?';
   }
 
   /* ── Main entry point ── */
@@ -79,19 +80,19 @@ Reply ONLY with JSON: {"action":"<one of: ${actions.join('/')}>","reasoning":"<o
 
   _call(prompt) {
     switch (this.provider) {
-      case 'anthropic': return this._callAnthropic(prompt);
-      case 'openai':    return this._callOpenAI(prompt);
+      case 'sk-ant': return this._callSkAnt(prompt);
+      case 'sk':     return this._callSk(prompt);
       default: throw new Error(`Unknown provider: ${this.provider}`);
     }
   }
 
-  async _callAnthropic(prompt) {
+  async _callSkAnt(prompt) {
     const resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
-        'x-api-key':     this.apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type':  'application/json',
+        'x-api-key':          this.apiKey,
+        'anthropic-version':  '2023-06-01',
+        'content-type':       'application/json',
         'anthropic-dangerous-direct-browser-calls': 'true',
       },
       body: JSON.stringify({
@@ -102,12 +103,12 @@ Reply ONLY with JSON: {"action":"<one of: ${actions.join('/')}>","reasoning":"<o
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `Anthropic ${resp.status}`);
+      throw new Error(err.error?.message || `API error ${resp.status}`);
     }
     return (await resp.json()).content[0]?.text ?? '';
   }
 
-  async _callOpenAI(prompt) {
+  async _callSk(prompt) {
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -122,7 +123,7 @@ Reply ONLY with JSON: {"action":"<one of: ${actions.join('/')}>","reasoning":"<o
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({}));
-      throw new Error(err.error?.message || `OpenAI ${resp.status}`);
+      throw new Error(err.error?.message || `API error ${resp.status}`);
     }
     return (await resp.json()).choices[0]?.message?.content ?? '';
   }

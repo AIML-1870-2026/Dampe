@@ -730,8 +730,7 @@ class UI {
 
   _parseEnvFile(content) {
     const patterns = [
-      /ANTHROPIC_API_KEY\s*=\s*['"]?([^\s'"#]+)/i,
-      /OPENAI_API_KEY\s*=\s*['"]?([^\s'"#]+)/i,
+      /(?:ANTHROPIC|OPENAI|LLM)_API_KEY\s*=\s*['"]?([^\s'"#]+)/i,
       /API_KEY\s*=\s*['"]?([^\s'"#]+)/i,
     ];
     for (const re of patterns) {
